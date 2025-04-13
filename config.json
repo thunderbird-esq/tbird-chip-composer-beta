@@ -1,0 +1,10 @@
+{
+  "assets": "assets/",
+  "samples": "samples/",
+  "theme": "dark",
+  "bpmDefault": 120,
+  "enableBitcrusher": true,
+  "enableArpeggiator": true,
+  "gridSteps": 16,
+  "audioVolume": 0.5
+}
