@@ -1,1 +1,87 @@
 // Placeholder content for grid.css
+
+.tracker-grid-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: 'Courier New', Courier, monospace; /* Monospaced font for alignment */
+    font-size: 0.9em;
+    table-layout: fixed; /* Helps with column widths */
+    border: 1px solid #444;
+}
+
+.tracker-grid-table th,
+.tracker-grid-table td {
+    border: 1px solid #333; /* Darker borders for cells */
+    padding: 4px 6px;
+    text-align: center;
+    white-space: nowrap; /* Prevent wrapping */
+    overflow: hidden; /* Hide overflow */
+    text-overflow: ellipsis; /* Add ellipsis for overflow */
+    position: relative; /* For absolute positioning of input if needed, though not used yet */
+}
+
+.tracker-grid-table thead th {
+    background-color: #2a2a2a; /* Dark header background */
+    color: #ccc;
+    font-weight: bold;
+}
+
+.tracker-grid-table tbody tr:nth-child(even) {
+    background-color: #1e1e1e; /* Slightly lighter for even rows */
+}
+.tracker-grid-table tbody tr:nth-child(odd) {
+    background-color: #181818; /* Darker for odd rows */
+}
+
+.tracker-grid-table td {
+    color: #bbb; /* Default text color for cells */
+}
+
+.tracker-grid-table .row-number {
+    background-color: #2c2c2c;
+    color: #888;
+    font-weight: bold;
+    width: 40px; /* Fixed width for row numbers */
+}
+
+/* Specific column types for potential styling, though not strictly needed with fixed layout */
+.tracker-grid-table .note-cell { width: 50px; }
+.tracker-grid-table .instrument-cell { width: 40px; }
+.tracker-grid-table .effect-cmd-cell { width: 40px; }
+.tracker-grid-table .effect-val-cell { width: 40px; }
+
+
+/* Highlighting for selected cell */
+.tracker-grid-table td.selected-cell {
+    background-color: #555; /* Darker background for selection */
+    color: #fff; /* Brighter text for selection */
+    outline: 1px solid #77f; /* Blue outline */
+}
+
+/* Highlighting for the currently playing row */
+.tracker-grid-table tr.playing-row > td { /* Style cells in the playing row */
+    background-color: #3a3a4a; /* A slightly different background for the playing row */
+    /* color: #f0f0f0; */ /* Optional: change text color */
+}
+
+/* Ensure selected cell in playing row is distinct */
+.tracker-grid-table tr.playing-row > td.selected-cell {
+    background-color: #4a4a6a; /* Darker than playing-row, different from default selected */
+    outline: 1px solid #99f; /* Slightly different outline for selected playing cell */
+}
+
+/* Styling for the inline input field within a grid cell */
+.grid-cell-input {
+    font-family: inherit; /* Use the same font as the grid */
+    font-size: inherit;   /* Use the same font size */
+    color: #e0e0e0;       /* Text color for input, should be bright */
+    background-color: #252530; /* Background for the input, distinct from normal cells */
+    text-align: center;   /* Center the text within the input */
+    outline: 1px solid #88f; /* Visual cue that it's an input field */
+    width: 100%;          /* Fill the cell width */
+    height: 100%;         /* Fill the cell height */
+    border: none;         /* Remove default input border */
+    padding: 0;           /* Remove default input padding */
+    margin: 0;            /* Remove default input margin */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
