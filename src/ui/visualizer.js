@@ -1,197 +1,108 @@
 /**
- * @file Audio Visualizer UI component for Thunderbird Chiptune Composer.
- * Displays visual feedback based on the audio output.
+ * @file Basic Audio Visualizer for Thunderbird Chiptune Composer.
+ * Displays a simple representation of audio output.
  */
 
 class Visualizer {
     /**
      * Creates an instance of Visualizer.
      * @param {HTMLElement} containerElement - The DOM element to render the visualizer into.
-     * @param {AudioContext} [audioContext] - The Web Audio API AudioContext.
-     * @param {AnalyserNode} [analyserNode] - An AnalyserNode to get audio data from.
+     * @param {AudioEngine} audioEngine - The main audio engine instance.
      */
-    constructor(containerElement, audioContext, analyserNode) {
+    constructor(containerElement, audioEngine) {
         if (!containerElement) {
             throw new Error("Container element is required for Visualizer.");
         }
+        if (!audioEngine || !audioEngine.audioContext) {
+            throw new Error("AudioEngine with an initialized AudioContext is required for Visualizer.");
+        }
         this.containerElement = containerElement;
-        this.audioContext = audioContext;
-        this.analyserNode = analyserNode;
-
+        this.audioEngine = audioEngine;
         this.canvas = null;
         this.canvasCtx = null;
+        this.analyserNode = null;
+        this.dataArray = null;
         this.animationFrameId = null;
 
-        // Placeholder properties for simple animation
-        this.xPosition = 0;
-        this.direction = 1;
-        this.barHeight = 20;
+        this._setupAnalyser();
     }
 
-    /**
-     * Initializes the visualizer by creating the canvas and setting up basic properties.
-     */
-    init() {
-        this.containerElement.innerHTML = ''; // Clear previous content
+    _setupAnalyser() {
+        this.analyserNode = this.audioEngine.audioContext.createAnalyser();
+        this.analyserNode.fftSize = 256; // Smaller FFT for simpler visualization
+        this.analyserNode.smoothingTimeConstant = 0.85;
 
+        // Connect analyser to the master gain (or a point just before destination)
+        // Assuming audioEngine.masterGain is the final node before destination
+        this.audioEngine.masterGain.connect(this.analyserNode);
+        // NOTE: Do NOT connect analyserNode to destination, it's for analysis only.
+
+        this.dataArray = new Uint8Array(this.analyserNode.frequencyBinCount);
+    }
+
+    init() {
+        this.containerElement.innerHTML = ''; // Clear container
         this.canvas = document.createElement('canvas');
-        this.canvas.id = 'audio-visualizer-canvas';
+        this.canvas.width = this.containerElement.clientWidth || 300;
+        this.canvas.height = this.containerElement.clientHeight || 100;
         this.containerElement.appendChild(this.canvas);
         this.canvasCtx = this.canvas.getContext('2d');
 
-        this.resizeCanvas();
-        window.addEventListener('resize', () => this.resizeCanvas()); // Adjust canvas on window resize
-
-        console.log("Visualizer initialized.");
-        this.startAnimation(); // Start drawing immediately
-    }
-
-    /**
-     * Resizes the canvas to fit its container.
-     */
-    resizeCanvas() {
-        if (this.canvas) {
-            this.canvas.width = this.containerElement.clientWidth;
-            this.canvas.height = this.containerElement.clientHeight || 100; // Default height if container has none
-            console.log(`Visualizer canvas resized to ${this.canvas.width}x${this.canvas.height}`);
+        if (!this.canvasCtx) {
+            console.error("Failed to get 2D context from canvas for visualizer.");
+            return;
         }
+
+        this.draw(); // Start drawing loop
+        console.log("Visualizer initialized and drawing started.");
     }
 
-    /**
-     * Starts the animation loop for drawing the visualization.
-     */
-    startAnimation() {
-        if (this.animationFrameId) {
-            this.stopAnimation();
+    draw() {
+        if (!this.canvasCtx || !this.analyserNode) {
+            return;
         }
-        const animationLoop = () => {
-            this.draw();
-            this.animationFrameId = requestAnimationFrame(animationLoop);
-        };
-        this.animationFrameId = requestAnimationFrame(animationLoop);
-        console.log("Visualizer animation started.");
+
+        // Get time domain data (waveform)
+        this.analyserNode.getByteTimeDomainData(this.dataArray);
+
+        this.canvasCtx.fillStyle = 'rgb(20, 20, 30)'; // Background color
+        this.canvasCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        this.canvasCtx.lineWidth = 2;
+        this.canvasCtx.strokeStyle = 'rgb(50, 200, 50)'; // Waveform color
+        this.canvasCtx.beginPath();
+
+        const sliceWidth = this.canvas.width * 1.0 / this.analyserNode.frequencyBinCount;
+        let x = 0;
+
+        for (let i = 0; i < this.analyserNode.frequencyBinCount; i++) {
+            const v = this.dataArray[i] / 128.0; // Normalize to 0.0 - 2.0
+            const y = v * this.canvas.height / 2;
+
+            if (i === 0) {
+                this.canvasCtx.moveTo(x, y);
+            } else {
+                this.canvasCtx.lineTo(x, y);
+            }
+            x += sliceWidth;
+        }
+
+        this.canvasCtx.lineTo(this.canvas.width, this.canvas.height / 2);
+        this.canvasCtx.stroke();
+
+        this.animationFrameId = requestAnimationFrame(() => this.draw());
     }
 
-    /**
-     * Stops the animation loop.
-     */
-    stopAnimation() {
+    stop() {
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-            console.log("Visualizer animation stopped.");
         }
-    }
-
-    /**
-     * Draws the visualization on the canvas.
-     * This will draw a simple placeholder if no AnalyserNode is provided or active.
-     */
-    draw() {
-        if (!this.canvasCtx || !this.canvas) return;
-
-        const width = this.canvas.width;
-        const height = this.canvas.height;
-
-        // Clear canvas
-        this.canvasCtx.fillStyle = 'rgb(20, 20, 30)'; // Dark background
-        this.canvasCtx.fillRect(0, 0, width, height);
-
-        if (this.analyserNode) {
-            // Example: Drawing frequency data (bar graph)
-            this.analyserNode.fftSize = 256; // Adjust as needed
-            const bufferLength = this.analyserNode.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
-            this.analyserNode.getByteFrequencyData(dataArray);
-
-            this.canvasCtx.fillStyle = 'rgb(50, 150, 250)';
-            const barWidth = (width / bufferLength) * 2.5;
-            let barX = 0;
-
-            for (let i = 0; i < bufferLength; i++) {
-                const barHeightValue = dataArray[i];
-                const barHeightScaled = (barHeightValue / 255) * height;
-
-                this.canvasCtx.fillRect(barX, height - barHeightScaled, barWidth, barHeightScaled);
-                barX += barWidth + 1; // +1 for spacing
-            }
-        } else {
-            // Placeholder visualization: A simple bouncing horizontal line
-            this.canvasCtx.fillStyle = 'rgb(100, 200, 250)';
-
-            // Update position for the bouncing line
-            this.xPosition += 2 * this.direction;
-            if (this.xPosition > width - 50 || this.xPosition < 0) {
-                this.direction *= -1;
-            }
-            // Ensure xPosition stays within bounds if resize happens mid-animation
-            this.xPosition = Math.max(0, Math.min(this.xPosition, width - 50));
-
-
-            const yPosition = height / 2 - this.barHeight / 2;
-            this.canvasCtx.fillRect(this.xPosition, yPosition, 50, this.barHeight);
-
-            this.canvasCtx.font = '12px Arial';
-            this.canvasCtx.fillStyle = 'rgb(200, 200, 200)';
-            this.canvasCtx.textAlign = 'center';
-            this.canvasCtx.fillText('Visualizer Active (Placeholder)', width / 2, height / 2 - 20);
-        }
-    }
-
-    /**
-     * Connects an AnalyserNode to the visualizer.
-     * @param {AnalyserNode} analyserNode
-     */
-    connectAnalyser(analyserNode) {
-        this.analyserNode = analyserNode;
-        console.log("AnalyserNode connected to Visualizer.");
-    }
-
-    /**
-     * Disconnects the AnalyserNode.
-     */
-    disconnectAnalyser() {
-        this.analyserNode = null;
-        console.log("AnalyserNode disconnected from Visualizer.");
+        // Optional: Disconnect analyser node if visualizer is to be permanently stopped/destroyed
+        // if (this.analyserNode && this.audioEngine.masterGain) {
+        //     this.analyserNode.disconnect(this.audioEngine.masterGain);
+        // }
+        console.log("Visualizer drawing stopped.");
     }
 }
 
 export default Visualizer;
-
-// How it might be initialized in a main application script:
-//
-// import Visualizer from './ui/visualizer.js';
-// import audioEngine from './audio/engine.js'; // Assuming audioEngine is initialized and has an analyser
-//
-// document.addEventListener('DOMContentLoaded', () => {
-//     const visualizerContainer = document.getElementById('visualizer-container');
-//     if (visualizerContainer) {
-//         // Assuming audioEngine is initialized and has an analyserNode accessible
-//         // For example, audioEngine.masterGain could be connected to an analyserNode,
-//         // and that analyserNode is exposed by the audioEngine instance.
-//         // const analyser = audioEngine.getAnalyserNode(); // Hypothetical method
-//
-//         // For now, initialize without a real analyser for placeholder visuals
-//         const visualizer = new Visualizer(visualizerContainer);
-//         visualizer.init(); // This also starts the animation
-//
-//         // Later, if an analyser is available from the audio engine:
-//         // if (audioEngine && audioEngine.analyserNode) { // Or however it's exposed
-//         //    visualizer.connectAnalyser(audioEngine.analyserNode);
-//         // }
-//
-//     } else {
-//         console.error("Visualizer container not found in the DOM.");
-//     }
-// });
-//
-// As with other UI modules, the above init logic is for a main app script.
-// The subtask is focused on creating visualizer.js.
-// Example in main.js:
-// import Visualizer from './ui/visualizer.js';
-// import audioEngine from './audio/engine.js'; // if it exposes an analyser
-//
-// const visualizerContainer = document.getElementById('visualizer-container');
-// const visualizer = new Visualizer(visualizerContainer, audioEngine.audioContext, audioEngine.analyserNode); // Pass nodes if available
-// visualizer.init();
-// If analyserNode is added to audioEngine later, visualizer.connectAnalyser(audioEngine.analyserNode) can be called.

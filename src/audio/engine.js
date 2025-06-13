@@ -7,11 +7,26 @@ class AudioEngine {
     constructor() {
         this.audioContext = null;
         this.masterGain = null;
-        this.playbackIntervalId = null;
+        // this.playbackIntervalId = null; // Removed
         this.currentStep = 0;
         this.trackerGrid = null; // To hold a reference to the grid
         this.isPlaying = false;
-        this.isPaused = false;
+        this.isPaused = false; // Ensure isPaused is initialized
+        this.instruments = new Map();
+        this.defaultInstrument = {
+            id: 'default',
+            name: 'Default Sine',
+            waveform: 'sine',
+            attack: 0.02,
+            decay: 0.15
+        };
+
+        this.bpm = 120;
+        this.scheduleAheadTime = 0.1;
+        this.nextNoteTime = 0.0;
+        this.timerID = null;
+        this.noteDuration = 0.15;
+        this.maxSteps = 16;
     }
 
     /**
@@ -76,78 +91,115 @@ class AudioEngine {
      * Placeholder for scheduling a note to be played by a specific instrument.
      * @param {object} note - Object containing note details (e.g., pitch, velocity).
      * @param {number} time - The AudioContext time to play the note.
-     * @param {number} duration - The duration of the note in seconds.
-     * @param {object} instrument - The instrument to play the note with.
+     * @param {number} duration - The duration of the note in seconds (now less relevant due to envelope).
+     * @param {object} instrumentData - The instrument data object to use for this note.
      */
-    scheduleNote(note, time, duration, instrument) {
-        // console.log(`Placeholder: scheduleNote(note, ${time}, ${duration}, instrument)`);
-        if (!this.audioContext) {
-            console.error("AudioContext not initialized.");
+    scheduleNote(noteInfo, time, duration, instrumentData) {
+        if (!this.audioContext || this.audioContext.state === 'closed') {
+            console.warn("AudioEngine.scheduleNote: AudioContext not available or closed.");
+            return;
+        }
+        if (!noteInfo || typeof noteInfo.pitch !== 'number') {
+            console.warn("AudioEngine.scheduleNote: Invalid noteInfo or pitch missing.");
             return;
         }
 
-        const oscillator = this.audioContext.createOscillator();
+        const activeInstrument = instrumentData || this.defaultInstrument;
+
+        const osc = this.audioContext.createOscillator();
         const gainNode = this.audioContext.createGain();
 
-        // Use note.pitch for frequency
-        oscillator.type = (instrument && instrument.type) ? instrument.type : 'square';
-        oscillator.frequency.setValueAtTime(note.pitch, time);
+        osc.type = activeInstrument.waveform || 'sine';
+        osc.frequency.setValueAtTime(noteInfo.pitch, time);
 
-        oscillator.connect(gainNode);
         gainNode.connect(this.masterGain);
+        osc.connect(gainNode);
 
-        // Simple AD envelope
+        const attackTime = Math.max(0.001, activeInstrument.attack || 0.01); // Ensure positive time
+        const decayTime = Math.max(0.001, activeInstrument.decay || 0.1);   // Ensure positive time
+        const peakVolume = Math.max(0, Math.min(1, noteInfo.velocity || 0.5)); // Clamp volume
+
         gainNode.gain.setValueAtTime(0, time);
-        gainNode.gain.linearRampToValueAtTime(0.5, time + 0.05); // Attack
-        gainNode.gain.linearRampToValueAtTime(0, time + duration); // Decay
+        gainNode.gain.linearRampToValueAtTime(peakVolume, time + attackTime);
+        gainNode.gain.linearRampToValueAtTime(0, time + attackTime + decayTime);
 
-        oscillator.start(time);
-        oscillator.stop(time + duration);
-        console.log(`AudioEngine: Scheduled note (freq: ${note.pitch}Hz) at time ${time} for ${duration}s`);
+        osc.start(time);
+        osc.stop(time + attackTime + decayTime + 0.05); // Stop oscillator slightly after envelope
+        // console.log(`AudioEngine: Scheduled note (freq: ${noteInfo.pitch}Hz) using ${activeInstrument.name || activeInstrument.id} at time ${time}`);
     }
 
     /**
      * Starts the audio scheduler/playback.
      */
     startPlayback() {
+        if (this.isPlaying && !this.isPaused) {
+            console.log("Playback already started and not paused.");
+            return true;
+        }
         if (!this.audioContext || this.audioContext.state === 'closed') {
-            console.error("AudioEngine: AudioContext not available or closed. Cannot start playback.");
+            console.error("AudioEngine.startPlayback: AudioContext not initialized or closed.");
             this.isPlaying = false;
+            this.isPaused = false;
             return false;
         }
+
+        const doStart = () => {
+            this.isPlaying = true;
+            this.isPaused = false;
+            if (this.nextNoteTime === 0.0 || this.currentStep === 0) { // Start from beginning or if it's a fresh start
+                 this.currentStep = 0;
+                 this.nextNoteTime = this.audioContext.currentTime + 0.05; // Start scheduling slightly in the future
+            } else {
+                // Resuming from pause: nextNoteTime should already be set appropriately relative to audioContext.currentTime
+                // Ensure nextNoteTime is not in the past due to long pause.
+                this.nextNoteTime = Math.max(this.nextNoteTime, this.audioContext.currentTime + 0.05);
+            }
+            this.scheduler(); // Start the scheduling loop
+            console.log("Playback started/resumed with Web Audio scheduler.");
+        };
 
         if (this.audioContext.state === 'suspended') {
             this.audioContext.resume().then(() => {
                 console.log("AudioContext resumed.");
-                this._startSequencerInternal();
+                doStart();
             }).catch(e => {
                 console.error("Error resuming AudioContext:", e);
                 this.isPlaying = false;
-                // Consider not returning false here as the promise is async
+                this.isPaused = false;
+                return false; // Indicate failure
             });
-            // Note: _startSequencerInternal might not be called immediately here.
-            // For a more accurate return value, we might need to await the resume.
-            // However, for now, we'll assume it will eventually start or log an error.
-            // Let's proceed with optimistic true, but this could be refined.
         } else {
-            this._startSequencerInternal();
+            doStart();
         }
-        return true; // Indicates attempt to start was made
+        return true; // Indicates attempt to start/resume
     }
 
-    _startSequencerInternal() {
-        if (this.playbackIntervalId) {
-            clearInterval(this.playbackIntervalId);
-        }
-        this.currentStep = 0;
-        console.log("AudioEngine: Starting playback sequencer...");
+    /**
+     * Calculates the duration of a single step/row in seconds based on BPM.
+     * @returns {number} Duration of a step in seconds.
+     */
+    calculateStepDuration() {
+        return 60.0 / this.bpm;
+    }
 
-        this.playbackIntervalId = setInterval(() => {
-            this.playStepData(this.currentStep, this.audioContext.currentTime);
-            this.currentStep = (this.currentStep + 1) % 16; // Loop 16 steps
-        }, 150);
-        this.isPlaying = true;
-        this.isPaused = false;
+    /**
+     * The core scheduling loop that uses setTimeout for precision.
+     */
+    scheduler() {
+        if (!this.isPlaying || this.isPaused) return;
+
+        while (this.nextNoteTime < this.audioContext.currentTime + this.scheduleAheadTime) {
+            // console.log(`Scheduling step ${this.currentStep} at ${this.nextNoteTime.toFixed(3)}`);
+            this.playStepData(this.currentStep, this.nextNoteTime);
+
+            this.nextNoteTime += this.calculateStepDuration();
+
+            this.currentStep++;
+            if (this.currentStep >= this.maxSteps) {
+                this.currentStep = 0;
+            }
+        }
+        this.timerID = setTimeout(() => this.scheduler(), this.scheduleAheadTime * 1000 / 2);
     }
 
     /**
@@ -166,28 +218,77 @@ class AudioEngine {
             return;
         }
 
-        const noteDuration = 0.1; // seconds, make this configurable later (e.g., based on BPM)
+        // const noteDuration = 0.1; // This is now this.noteDuration, set in constructor
 
         stepData.forEach((trackCell, trackIndex) => {
-            if (trackCell && trackCell.note && trackCell.note !== '---') {
-                // Basic note parsing (e.g., "C-4", "F#3"). For now, just use a fixed frequency for any note.
-                // A more sophisticated parser will be needed later.
-                // For simplicity, we'll use trackIndex to vary pitch slightly for now.
-                const baseFrequency = 220; // A2
-                const frequency = baseFrequency * Math.pow(2, trackIndex / 12);
+            const frequency = this.parseNoteString(trackCell.note);
 
-                console.log(`AudioEngine: Scheduling note for Step: ${step}, Track: ${trackIndex}, Note: ${trackCell.note}, Freq: ${frequency.toFixed(2)}Hz`);
-
-                // Construct a simple note object for scheduleNote
+            if (frequency) { // Check if frequency is not null (i.e., valid note string)
                 const noteInfo = {
-                    pitch: frequency, // Using frequency directly as pitch for now
-                    velocity: 0.5 // Default velocity
+                    pitch: frequency,
+                    velocity: 0.5 // Default velocity, could be from grid later
                 };
-                const instrument = null; // Placeholder for actual instrument data
-
-                this.scheduleNote(noteInfo, time, noteDuration, instrument);
+                const instrumentId = trackCell.instrument;
+                const activeInstrument = (instrumentId && instrumentId !== '--') ? this.getInstrument(instrumentId) : this.defaultInstrument;
+                this.scheduleNote(noteInfo, time, this.noteDuration, activeInstrument);
             }
         });
+    }
+
+    /**
+     * Parses a note string (e.g., "C-4", "F#-3") into a frequency.
+     * @param {string} noteString - The note string to parse.
+     * @returns {number|null} The frequency in Hz, or null if parsing fails.
+     */
+    parseNoteString(noteString) {
+        if (!noteString || typeof noteString !== 'string' || noteString.trim() === '---') {
+            return null;
+        }
+
+        const upperNoteString = noteString.toUpperCase().trim();
+        // Expects format like "C-4", "F#-3", "A#-5"
+        const match = upperNoteString.match(/^([A-G])([#]?)-([0-9])$/);
+
+        if (!match) {
+            // console.warn(`AudioEngine.parseNoteString: Invalid note format: "${noteString}". Expected format like "C-4" or "F#-3".`);
+            return null;
+        }
+
+        const baseNote = match[1];
+        const accidental = match[2]; // "#" or ""
+        const octave = parseInt(match[3]);
+        const noteName = baseNote + accidental;
+
+        const noteValues = { // Semitones from C
+            'C': 0, 'C#': 1,
+            'D': 2, 'D#': 3,
+            'E': 4,
+            'F': 5, 'F#': 6,
+            'G': 7, 'G#': 8,
+            'A': 9, 'A#': 10,
+            'B': 11
+        };
+
+        if (!noteValues.hasOwnProperty(noteName)) {
+            console.warn(`AudioEngine.parseNoteString: Unknown note name: "${noteName}" in "${noteString}"`);
+            return null;
+        }
+
+        const semitone = noteValues[noteName];
+
+        // MIDI note number calculation: C4 = 60.
+        // C0 = 12, C1 = 24, ..., C4 = 60, C5 = 72
+        const midiNote = semitone + (octave * 12) + 12;
+
+        if (midiNote < 0 || midiNote > 127) {
+            console.warn(`AudioEngine.parseNoteString: MIDI note ${midiNote} for "${noteString}" is out of typical range 0-127.`);
+            return null;
+        }
+
+        // Standard reference: A4 = 440 Hz (MIDI note 69)
+        const frequency = 440 * Math.pow(2, (midiNote - 69) / 12);
+        // console.log(`Parsed "${noteString}" to MIDI: ${midiNote}, Freq: ${frequency.toFixed(2)} Hz`);
+        return frequency;
     }
 
 
@@ -195,32 +296,27 @@ class AudioEngine {
      * Stops the audio scheduler/playback.
      */
     stopPlayback() {
-        if (this.playbackIntervalId) {
-            clearInterval(this.playbackIntervalId);
-            this.playbackIntervalId = null;
-        }
-        this.currentStep = 0;
+        clearTimeout(this.timerID);
         this.isPlaying = false;
         this.isPaused = false;
-        // Optional: stop all sounding notes
-        console.log("AudioEngine: Playback stopped, sequencer interval cleared.");
+        this.currentStep = 0;
+        this.nextNoteTime = 0.0;
+        console.log("Playback stopped, Web Audio scheduler timeout cleared.");
         return true;
     }
 
     /**
-     * Placeholder for pausing playback.
-     * For now, it behaves like stop.
+     * Pauses playback by stopping the scheduler and noting the paused state.
      */
     pausePlayback() {
-        // True pause would suspend the AudioContext or stop feeding the sequencer
-        // without resetting the currentStep. For now, just stop.
-        if (this.isPlaying) {
-            clearInterval(this.playbackIntervalId);
-            this.playbackIntervalId = null; // Or store it to resume later
-            this.isPlaying = false;
-            this.isPaused = true;
-            console.log("AudioEngine: Playback paused (currently behaves like stop).");
+        if (!this.isPlaying || this.isPaused) {
+            console.log("Playback not active or already paused.");
+            return false;
         }
+        clearTimeout(this.timerID);
+        this.isPaused = true;
+        // this.isPlaying remains true, as playback is active but paused
+        console.log("Playback paused.");
         return true;
     }
 
@@ -256,7 +352,46 @@ class AudioEngine {
      */
     setTrackerGrid(gridInstance) {
         this.trackerGrid = gridInstance;
-        console.log("AudioEngine: TrackerGrid instance received.");
+        if (gridInstance) {
+            this.maxSteps = gridInstance.numRows || 16;
+        }
+        console.log(`AudioEngine: TrackerGrid instance received. maxSteps set to ${this.maxSteps}.`);
+    }
+
+    /**
+     * Loads an instrument configuration into the engine.
+     * @param {object} instrumentObject - The instrument definition.
+     */
+    loadInstrument(instrumentObject) {
+        if (instrumentObject && instrumentObject.id) {
+            this.instruments.set(instrumentObject.id, instrumentObject);
+            console.log(`Instrument '${instrumentObject.name || instrumentObject.id}' (ID: ${instrumentObject.id}) loaded.`);
+        } else {
+            console.warn('Failed to load instrument: Instrument object or ID is missing.');
+        }
+    }
+
+    /**
+     * Retrieves an instrument configuration by its ID.
+     * @param {string} instrumentId - The ID of the instrument.
+     * @returns {object} The instrument configuration or the default instrument if not found.
+     */
+    getInstrument(instrumentId) {
+        return this.instruments.get(instrumentId) || this.defaultInstrument;
+    }
+
+    /**
+     * Sets the Beats Per Minute (BPM) for the sequencer.
+     * @param {number} newBPM - The new BPM value.
+     */
+    setBPM(newBPM) {
+        if (typeof newBPM === 'number' && newBPM > 0) {
+            this.bpm = newBPM;
+            console.log(`AudioEngine: BPM set to ${this.bpm}`);
+            // The change will take effect in the scheduler via calculateStepDuration()
+        } else {
+            console.warn(`AudioEngine.setBPM: Invalid BPM value provided: ${newBPM}`);
+        }
     }
 }
 

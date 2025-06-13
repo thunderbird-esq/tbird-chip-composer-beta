@@ -173,13 +173,46 @@ class PanelManager {
         this.addPanel({
             id: 'instrument-editor-panel',
             title: 'Instrument Editor',
-            contentElement: '<p>Instrument settings, waveform selection, envelope controls, and effects will go here.</p><div id="instrument-details">Select an instrument to edit.</div>'
+            contentElement: `
+                <div id="instrument-editor-content">
+                    <p>Editing Instrument: <strong id="editing-inst-id">--</strong> (<span id="editing-inst-name">--</span>)</p>
+                    <div id="instrument-details-form">
+                        <label for="inst-waveform">Waveform:</label>
+                        <select id="inst-waveform">
+                            <option value="sine">Sine</option>
+                            <option value="square">Square</option>
+                            <option value="sawtooth">Sawtooth</option>
+                            <option value="triangle">Triangle</option>
+                        </select><br>
+
+                        <label for="inst-attack">Attack (s):</label>
+                        <input type="number" id="inst-attack" step="0.001" min="0.001" value="0.01"><br>
+
+                        <label for="inst-decay">Decay (s):</label>
+                        <input type="number" id="inst-decay" step="0.001" min="0.001" value="0.1"><br>
+
+                        <button id="update-instrument-button">Update Instrument '01'</button>
+                    </div>
+                    <p><small>Currently editing Instrument '01'. Other instrument selection will be added later.</small></p>
+                </div>
+            `
         });
 
         this.addPanel({
             id: 'project-settings-panel',
             title: 'Project Settings',
-            contentElement: '<p>Project name, global tempo (BPM), swing/groove settings, and song length will be configured here.</p><label for="project-name">Project Name:</label><input type="text" id="project-name" value="My Chiptune">'
+            contentElement: `
+                <div id="project-settings-content">
+                    <label for="project-name">Project Name:</label>
+                    <input type="text" id="project-name" value="My Chiptune"><br><br>
+
+                    <label for="setting-bpm">BPM (Beats Per Minute):</label>
+                    <input type="number" id="setting-bpm" step="1" min="20" max="999" value="120"><br><br>
+
+                    <button id="update-project-settings-button">Update Settings</button>
+                    <p><small>Other settings like global swing, song length, etc., can be added later.</small></p>
+                </div>
+            `
         });
 
         this.addPanel({
@@ -187,6 +220,21 @@ class PanelManager {
             title: 'Sample Library (Placeholder)',
             contentElement: '<p>If samples are supported, they would be managed here.</p>'
         });
+    }
+
+    /**
+     * Updates the content of a specific panel.
+     * @param {string} panelId - The ID of the panel to update.
+     * @param {HTMLElement|string} newContentElement - The new HTML content for the panel.
+     */
+    updatePanelContent(panelId, newContentElement) {
+        const panel = this.getPanel(panelId);
+        if (panel) {
+            panel.updateContent(newContentElement);
+            console.log(`PanelManager: Content updated for panel "${panelId}".`);
+        } else {
+            console.warn(`PanelManager: Panel "${panelId}" not found for content update.`);
+        }
     }
 }
 

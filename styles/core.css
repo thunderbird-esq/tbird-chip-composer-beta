@@ -1,1 +1,120 @@
-// Placeholder content for core.css
+/* Basic Reset / Global Styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #1a1a1a; /* Dark background for the app */
+    color: #e0e0e0; /* Light text color */
+    font-size: 14px;
+}
+
+#app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+#app-header {
+    /* Placeholder for future header content */
+    padding: 5px 0;
+    border-bottom: 1px solid #444;
+    text-align: center;
+    font-size: 1.2em;
+    color: #ccc;
+}
+#app-header::before {
+    content: "Thunderbird Chiptune Composer"; /* Example Title */
+}
+
+
+#main-content {
+    display: flex;
+    flex-grow: 1;
+    gap: 10px; /* Space between grid and panels */
+    margin-top: 10px;
+}
+
+#tracker-grid-container {
+    flex-grow: 3; /* Grid takes more space */
+    background-color: #222;
+    padding: 5px;
+    border-radius: 4px;
+    overflow-x: auto; /* Allow horizontal scrolling if grid is too wide */
+}
+
+#control-panels-container {
+    flex-grow: 1; /* Panels take less space */
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Space between individual panels */
+    min-width: 250px; /* Ensure panels have some minimum width */
+}
+
+#transport-controls-container {
+    background-color: #252525;
+    padding: 8px;
+    margin-top: 10px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    border-top: 1px solid #444;
+}
+
+#visualizer-container {
+    width: 100%;
+    height: 100px;
+    background-color: #101015; /* Dark background for visualizer */
+    border-top: 1px solid #444;
+    margin-top: 10px;
+    border-radius: 4px;
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+}
+
+#visualizer-container canvas {
+    display: block; /* Removes any extra space below canvas if container height is exact */
+    width: 100%;   /* Make canvas fill container width */
+    height: 100%;  /* Make canvas fill container height */
+}
+
+
+#app-footer {
+    /* Placeholder for future footer content */
+    padding: 10px 0;
+    text-align: center;
+    font-size: 0.8em;
+    color: #777;
+    border-top: 1px solid #444;
+    margin-top: 10px;
+}
+#app-footer::before {
+    content: "© Thunderbird Development Team";
+}
+
+/* Basic button styling (can be expanded in a dedicated button.css or theme.css) */
+button, select, input[type="text"], input[type="number"] {
+    background-color: #333;
+    color: #ddd;
+    border: 1px solid #555;
+    padding: 5px 8px;
+    border-radius: 3px;
+    margin: 2px;
+}
+button:hover {
+    background-color: #444;
+}
+button:disabled {
+    background-color: #2a2a2a;
+    color: #666;
+    border-color: #444;
+}
+
+label {
+    margin-right: 5px;
+}
+
+input[type="number"] {
+    width: 60px; /* Default width for number inputs */
+}
