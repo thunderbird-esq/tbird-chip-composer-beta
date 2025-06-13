@@ -175,7 +175,13 @@ class PanelManager {
             title: 'Instrument Editor',
             contentElement: `
                 <div id="instrument-editor-content">
-                    <p>Editing Instrument: <strong id="editing-inst-id">--</strong> (<span id="editing-inst-name">--</span>)</p>
+                    <div>
+                        <label for="instrument-select-id">Edit Instrument ID:</label>
+                        <input type="text" id="instrument-select-id" value="01" size="3">
+                        <button id="load-selected-instr-button">Load to Edit</button>
+                        Current: <strong id="editing-inst-id-display">--</strong> (<span id="editing-inst-name-display">--</span>)
+                    </div>
+                    <hr>
                     <div id="instrument-details-form">
                         <label for="inst-waveform">Waveform:</label>
                         <select id="inst-waveform">
@@ -185,15 +191,23 @@ class PanelManager {
                             <option value="triangle">Triangle</option>
                         </select><br>
 
+                        <label for="inst-volume">Volume (0-1):</label>
+                        <input type="number" id="inst-volume" step="0.01" min="0" max="1" value="0.7"><br>
+
                         <label for="inst-attack">Attack (s):</label>
                         <input type="number" id="inst-attack" step="0.001" min="0.001" value="0.01"><br>
 
                         <label for="inst-decay">Decay (s):</label>
                         <input type="number" id="inst-decay" step="0.001" min="0.001" value="0.1"><br>
 
-                        <button id="update-instrument-button">Update Instrument '01'</button>
+                        <label for="inst-sustain">Sustain Level (0-1):</label>
+                        <input type="number" id="inst-sustain" step="0.01" min="0" max="1" value="0.7"><br>
+
+                        <label for="inst-release">Release (s):</label>
+                        <input type="number" id="inst-release" step="0.001" min="0.001" value="0.2"><br>
+
+                        <button id="update-instrument-button">Update Selected Instrument</button>
                     </div>
-                    <p><small>Currently editing Instrument '01'. Other instrument selection will be added later.</small></p>
                 </div>
             `
         });
@@ -210,7 +224,10 @@ class PanelManager {
                     <input type="number" id="setting-bpm" step="1" min="20" max="999" value="120"><br><br>
 
                     <button id="update-project-settings-button">Update Settings</button>
-                    <p><small>Other settings like global swing, song length, etc., can be added later.</small></p>
+                    <hr>
+                    <button id="save-project-button">Save Project</button>
+                    <button id="load-project-button">Load Project</button>
+                    <p><small>Project Name is not saved yet. Save/Load uses browser's localStorage.</small></p>
                 </div>
             `
         });

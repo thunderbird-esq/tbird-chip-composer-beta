@@ -15,10 +15,13 @@ class AudioEngine {
         this.instruments = new Map();
         this.defaultInstrument = {
             id: 'default',
-            name: 'Default Sine',
+            name: 'Default ADSR',
             waveform: 'sine',
             attack: 0.02,
-            decay: 0.15
+            decay: 0.15,
+            sustainLevel: 0.7,
+            releaseTime: 0.2,
+            volume: 0.7 // Default per-instrument volume
         };
 
         this.bpm = 120;
@@ -27,6 +30,7 @@ class AudioEngine {
         this.timerID = null;
         this.noteDuration = 0.15;
         this.maxSteps = 16;
+        this.onStepChangeCallback = null;
     }
 
     /**
@@ -91,7 +95,7 @@ class AudioEngine {
      * Placeholder for scheduling a note to be played by a specific instrument.
      * @param {object} note - Object containing note details (e.g., pitch, velocity).
      * @param {number} time - The AudioContext time to play the note.
-     * @param {number} duration - The duration of the note in seconds (now less relevant due to envelope).
+     * @param {number} duration - The duration until the note-off signal (start of release phase).
      * @param {object} instrumentData - The instrument data object to use for this note.
      */
     scheduleNote(noteInfo, time, duration, instrumentData) {
@@ -105,6 +109,15 @@ class AudioEngine {
         }
 
         const activeInstrument = instrumentData || this.defaultInstrument;
+        const instrumentVolume = (activeInstrument.volume !== undefined) ? Math.max(0, Math.min(1, activeInstrument.volume)) : 0.7;
+        const noteVelocity = (noteInfo.velocity !== undefined) ? Math.max(0, Math.min(1, noteInfo.velocity)) : 0.7; // Default note velocity
+
+        const peakVolume = instrumentVolume * noteVelocity; // Combined peak volume
+
+        const attack = Math.max(0.001, activeInstrument.attack || 0.01);
+        const decay = Math.max(0.001, activeInstrument.decay || 0.1);
+        const sustain = Math.max(0, Math.min(1, activeInstrument.sustainLevel === undefined ? 0.7 : activeInstrument.sustainLevel));
+        const release = Math.max(0.001, activeInstrument.releaseTime || 0.2);
 
         const osc = this.audioContext.createOscillator();
         const gainNode = this.audioContext.createGain();
@@ -115,17 +128,22 @@ class AudioEngine {
         gainNode.connect(this.masterGain);
         osc.connect(gainNode);
 
-        const attackTime = Math.max(0.001, activeInstrument.attack || 0.01); // Ensure positive time
-        const decayTime = Math.max(0.001, activeInstrument.decay || 0.1);   // Ensure positive time
-        const peakVolume = Math.max(0, Math.min(1, noteInfo.velocity || 0.5)); // Clamp volume
+        const noteEndTime = time + duration; // Time when note-off occurs / release phase starts
 
-        gainNode.gain.setValueAtTime(0, time);
-        gainNode.gain.linearRampToValueAtTime(peakVolume, time + attackTime);
-        gainNode.gain.linearRampToValueAtTime(0, time + attackTime + decayTime);
+        gainNode.gain.setValueAtTime(0, time); // Initial value
+        gainNode.gain.linearRampToValueAtTime(peakVolume, time + attack); // Attack phase
+        gainNode.gain.linearRampToValueAtTime(peakVolume * sustain, time + attack + decay); // Decay to sustain level
+
+        // Hold sustain level until noteEndTime if duration is longer than Attack + Decay
+        if (noteEndTime > time + attack + decay) {
+            gainNode.gain.setValueAtTime(peakVolume * sustain, noteEndTime); // Explicitly set value at start of release
+        }
+        // For notes shorter than Attack+Decay, the previous ramp will be cut short by this one:
+        gainNode.gain.linearRampToValueAtTime(0, noteEndTime + release); // Release phase
 
         osc.start(time);
-        osc.stop(time + attackTime + decayTime + 0.05); // Stop oscillator slightly after envelope
-        // console.log(`AudioEngine: Scheduled note (freq: ${noteInfo.pitch}Hz) using ${activeInstrument.name || activeInstrument.id} at time ${time}`);
+        osc.stop(noteEndTime + release + 0.05); // Stop oscillator after release phase + small buffer
+        // console.log(`ADSR: A:${attack.toFixed(3)} D:${decay.toFixed(3)} S:${sustain.toFixed(2)} R:${release.toFixed(3)} Vol:${peakVolume.toFixed(2)} NoteOff@${noteEndTime.toFixed(3)} OscStop@${(noteEndTime + release + 0.05).toFixed(3)}`);
     }
 
     /**
@@ -197,6 +215,9 @@ class AudioEngine {
             this.currentStep++;
             if (this.currentStep >= this.maxSteps) {
                 this.currentStep = 0;
+            }
+            if (this.onStepChangeCallback) {
+                this.onStepChangeCallback(this.currentStep);
             }
         }
         this.timerID = setTimeout(() => this.scheduler(), this.scheduleAheadTime * 1000 / 2);
@@ -299,6 +320,9 @@ class AudioEngine {
         clearTimeout(this.timerID);
         this.isPlaying = false;
         this.isPaused = false;
+        if (this.onStepChangeCallback) {
+            this.onStepChangeCallback(-1); // Signal to clear playing row highlight
+        }
         this.currentStep = 0;
         this.nextNoteTime = 0.0;
         console.log("Playback stopped, Web Audio scheduler timeout cleared.");
@@ -391,6 +415,47 @@ class AudioEngine {
             // The change will take effect in the scheduler via calculateStepDuration()
         } else {
             console.warn(`AudioEngine.setBPM: Invalid BPM value provided: ${newBPM}`);
+        }
+    }
+
+    /**
+     * Sets a callback function to be invoked when the current playback step changes.
+     * @param {function} callback - The function to call. It will receive the current step number.
+     */
+    setOnStepChange(callback) {
+        this.onStepChangeCallback = callback;
+    }
+
+    /**
+     * Returns an array of all loaded instrument data objects.
+     * @returns {Array<object>} Array of instrument data.
+     */
+    getInstrumentsData() {
+        return Array.from(this.instruments.values());
+    }
+
+    /**
+     * Loads multiple instruments from an array, clearing existing ones.
+     * @param {Array<object>} instrumentsArray - An array of instrument data objects.
+     */
+    loadInstrumentsData(instrumentsArray) {
+        this.instruments.clear();
+        if (instrumentsArray && Array.isArray(instrumentsArray)) {
+            instrumentsArray.forEach(instrData => {
+                this.loadInstrument(instrData); // Use existing loadInstrument method
+            });
+            console.log("AudioEngine: Instruments data loaded from array.");
+        } else {
+            console.warn("AudioEngine.loadInstrumentsData: Invalid or empty data provided.");
+        }
+        // Ensure defaultInstrument is available if no instruments were loaded or if it was cleared
+        if (!this.instruments.has(this.defaultInstrument.id) && this.defaultInstrument.id !== 'default') {
+             // Avoid loading the 'default' instrument if it's just a placeholder name and not a real ID
+             // This logic might need refinement based on how 'default' ID is handled.
+        } else if (this.instruments.size === 0) {
+            // If after loading, no instruments are present (e.g. empty array), ensure default is there.
+            // this.loadInstrument(this.defaultInstrument); // This could be added if desired.
+            // For now, it's fine if it's empty if user loads an empty set.
         }
     }
 }

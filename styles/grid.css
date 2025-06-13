@@ -17,6 +17,7 @@
     white-space: nowrap; /* Prevent wrapping */
     overflow: hidden; /* Hide overflow */
     text-overflow: ellipsis; /* Add ellipsis for overflow */
+    position: relative; /* For absolute positioning of input if needed, though not used yet */
 }
 
 .tracker-grid-table thead th {
@@ -55,4 +56,32 @@
     background-color: #555; /* Darker background for selection */
     color: #fff; /* Brighter text for selection */
     outline: 1px solid #77f; /* Blue outline */
+}
+
+/* Highlighting for the currently playing row */
+.tracker-grid-table tr.playing-row > td { /* Style cells in the playing row */
+    background-color: #3a3a4a; /* A slightly different background for the playing row */
+    /* color: #f0f0f0; */ /* Optional: change text color */
+}
+
+/* Ensure selected cell in playing row is distinct */
+.tracker-grid-table tr.playing-row > td.selected-cell {
+    background-color: #4a4a6a; /* Darker than playing-row, different from default selected */
+    outline: 1px solid #99f; /* Slightly different outline for selected playing cell */
+}
+
+/* Styling for the inline input field within a grid cell */
+.grid-cell-input {
+    font-family: inherit; /* Use the same font as the grid */
+    font-size: inherit;   /* Use the same font size */
+    color: #e0e0e0;       /* Text color for input, should be bright */
+    background-color: #252530; /* Background for the input, distinct from normal cells */
+    text-align: center;   /* Center the text within the input */
+    outline: 1px solid #88f; /* Visual cue that it's an input field */
+    width: 100%;          /* Fill the cell width */
+    height: 100%;         /* Fill the cell height */
+    border: none;         /* Remove default input border */
+    padding: 0;           /* Remove default input padding */
+    margin: 0;            /* Remove default input margin */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
 }

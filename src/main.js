@@ -10,6 +10,8 @@ import TrackerGrid from './ui/grid.js';
 import Visualizer from './ui/visualizer.js';
 
 let panelManager; // Declare panelManager here to make it accessible
+let trackerGrid = null; // Declare trackerGrid here to make it accessible for save/load
+let currentEditingInstrumentId = '01'; // Default to '01'
 
 /**
  * Populates the instrument editor form with details of a given instrument.
@@ -19,10 +21,6 @@ let panelManager; // Declare panelManager here to make it accessible
  */
 function populateInstrumentEditorForm(instrumentId, audioEngineInstance, panelManagerInstance) {
     const instrument = audioEngineInstance.getInstrument(instrumentId);
-    if (!instrument) {
-        console.warn(`Cannot populate form: Instrument ID "${instrumentId}" not found.`);
-        return;
-    }
 
     const editorPanel = panelManagerInstance.getPanel('instrument-editor-panel');
     if (!editorPanel || !editorPanel.panelElement) {
@@ -30,13 +28,21 @@ function populateInstrumentEditorForm(instrumentId, audioEngineInstance, panelMa
         return;
     }
 
-    editorPanel.panelElement.querySelector('#editing-inst-id').textContent = instrument.id || '--';
-    editorPanel.panelElement.querySelector('#editing-inst-name').textContent = instrument.name || 'N/A';
+    const idInputField = editorPanel.panelElement.querySelector('#instrument-select-id');
+    if (idInputField) idInputField.value = instrumentId;
+
+    editorPanel.panelElement.querySelector('#editing-inst-id-display').textContent = instrument.id;
+    editorPanel.panelElement.querySelector('#editing-inst-name-display').textContent = instrument.name || (instrument.id === instrumentId ? `Instrument ${instrumentId}` : 'Default');
+
     editorPanel.panelElement.querySelector('#inst-waveform').value = instrument.waveform || 'sine';
+    editorPanel.panelElement.querySelector('#inst-volume').value = (instrument.volume !== undefined ? Number(instrument.volume).toFixed(2) : '0.70');
     editorPanel.panelElement.querySelector('#inst-attack').value = (instrument.attack !== undefined ? Number(instrument.attack).toFixed(3) : '0.010');
     editorPanel.panelElement.querySelector('#inst-decay').value = (instrument.decay !== undefined ? Number(instrument.decay).toFixed(3) : '0.100');
+    editorPanel.panelElement.querySelector('#inst-sustain').value = (instrument.sustainLevel !== undefined ? Number(instrument.sustainLevel).toFixed(2) : '0.70');
+    editorPanel.panelElement.querySelector('#inst-release').value = (instrument.releaseTime !== undefined ? Number(instrument.releaseTime).toFixed(3) : '0.200');
 
-    console.log(`Populated instrument editor form for instrument "${instrument.id || 'default'}".`);
+    currentEditingInstrumentId = instrumentId;
+    console.log(`Populated instrument editor form for instrument ID: "${instrumentId}" (Actual loaded: "${instrument.id}")`);
 }
 
 /**
@@ -54,8 +60,39 @@ function populateProjectSettingsForm(audioEngineInstance, panelManagerInstance) 
     if (bpmInput) {
         bpmInput.value = audioEngineInstance.bpm;
     }
-    // Add other project settings here later (e.g., project name)
     console.log(`Populated project settings form. BPM: ${audioEngineInstance.bpm}`);
+}
+
+function gatherProjectData(audioEngineInstance, trackerGridInstance) {
+    if (!audioEngineInstance || !trackerGridInstance) {
+        console.error("gatherProjectData: AudioEngine or TrackerGrid instance not available.");
+        return null;
+    }
+    return {
+        bpm: audioEngineInstance.bpm,
+        instruments: audioEngineInstance.getInstrumentsData(),
+        pattern: trackerGridInstance.getPatternData(),
+        currentEditingInstrumentId: currentEditingInstrumentId,
+        savedAt: new Date().toISOString()
+    };
+}
+
+function applyProjectData(data, audioEngineInstance, trackerGridInstance, panelManagerInstance) {
+    if (!data) { console.error("applyProjectData: No data to apply."); return; }
+    if (!audioEngineInstance || !trackerGridInstance || !panelManagerInstance) {
+        console.error("applyProjectData: Core instances not available."); return;
+    }
+
+    if (data.bpm) audioEngineInstance.setBPM(data.bpm);
+    if (data.instruments) audioEngineInstance.loadInstrumentsData(data.instruments);
+    if (data.pattern) trackerGridInstance.setPatternData(data.pattern);
+    if (data.currentEditingInstrumentId) currentEditingInstrumentId = data.currentEditingInstrumentId;
+    else currentEditingInstrumentId = '01'; // Fallback if not in saved data
+
+    populateProjectSettingsForm(audioEngineInstance, panelManagerInstance);
+    populateInstrumentEditorForm(currentEditingInstrumentId, audioEngineInstance, panelManagerInstance);
+
+    console.log("Project data applied. Loaded project saved at:", data.savedAt || "Unknown");
 }
 
 
@@ -63,9 +100,7 @@ async function loadConfigAndInitialize() {
     let config = {};
     try {
         const response = await fetch('config.json');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         config = await response.json();
         console.log("Configuration loaded:", config);
     } catch (error) {
@@ -73,144 +108,159 @@ async function loadConfigAndInitialize() {
         config = { bpmDefault: 120, audioVolume: 0.7 };
     }
 
-    // 1. Initialize Audio Engine
     if (!audioEngine.init()) {
         console.error("Fatal Error: AudioEngine initialization failed.");
-        const appContainer = document.getElementById('app-container');
-        if (appContainer) {
-            appContainer.innerHTML = '<p style="color: red; text-align: center; margin-top: 50px;">Error: Web Audio API not supported or failed to initialize.</p>';
-        }
+        document.getElementById('app-container').innerHTML = '<p style="color: red; text-align: center; margin-top: 50px;">Error: Web Audio API not supported.</p>';
         return;
     }
     audioEngine.setMasterVolume(config.audioVolume !== undefined ? config.audioVolume : 0.7);
     audioEngine.setBPM(config.bpmDefault !== undefined ? config.bpmDefault : 120);
-    console.log(`Initial BPM set to: ${audioEngine.bpm}, Volume: ${audioEngine.masterGain.gain.value.toFixed(2)}`);
+    console.log(`Initial BPM: ${audioEngine.bpm}, Volume: ${audioEngine.masterGain.gain.value.toFixed(2)}`);
 
-    // 2. Initialize Panel Manager
     panelManager = new PanelManager();
     const controlPanelsContainer = document.getElementById('control-panels-container');
     if (controlPanelsContainer) {
         panelManager.init('#control-panels-container');
         console.log("PanelManager initialized.");
-    } else {
-        console.error("Control panels container (#control-panels-container) not found.");
-    }
+    } else { console.error("Control panels container not found."); }
 
-    // 3. Initialize Tracker Grid
-    let trackerGrid = null;
     const gridContainer = document.getElementById('tracker-grid-container');
     if (gridContainer) {
         trackerGrid = new TrackerGrid(gridContainer);
         trackerGrid.init();
         console.log("TrackerGrid initialized.");
         audioEngine.setTrackerGrid(trackerGrid);
-    } else {
-        console.error("Tracker grid container (#tracker-grid-container) not found.");
-    }
+        audioEngine.setOnStepChange((step) => { if (trackerGrid) trackerGrid.setPlayingRow(step); });
+    } else { console.error("Tracker grid container not found."); }
 
-    // 4. Initialize Transport Control
     const transportContainer = document.getElementById('transport-controls-container');
     if (transportContainer) {
         const transportControl = new TransportControl(transportContainer, audioEngine);
         transportControl.init();
         console.log("TransportControl initialized.");
-    } else {
-        console.error("Transport controls container (#transport-controls-container) not found.");
-    }
+    } else { console.error("Transport controls container not found."); }
 
-    // 5. Initialize Visualizer
     const visualizerContainer = document.getElementById('visualizer-container');
     if (visualizerContainer && audioEngine.audioContext) {
         try {
             const visualizer = new Visualizer(visualizerContainer, audioEngine);
             visualizer.init();
             console.log("Visualizer component initialized.");
-            // Store visualizer instance if needed for global stop/start, e.g., window.visualizer = visualizer;
         } catch (error) {
             console.error("Failed to initialize Visualizer:", error);
-            visualizerContainer.innerHTML = '<p style="color:orange;">Visualizer failed to load.</p>';
+            visualizerContainer.innerHTML = '<p style="color:orange;">Visualizer failed.</p>';
         }
     } else {
-        console.warn("Visualizer container not found or AudioContext not ready for Visualizer.");
         if(visualizerContainer) visualizerContainer.innerHTML = '<p style="color:gray;">Visualizer disabled.</p>';
+        else console.warn("Visualizer container not found.");
     }
 
-    // Load default instruments into AudioEngine
     audioEngine.loadInstrument({
-        id: '01',
-        name: 'Simple Lead',
-        waveform: 'triangle',
-        attack: 0.01,
-        decay: 0.2
+        id: '01', name: 'Simple Lead', waveform: 'triangle',
+        volume: 0.6, attack: 0.01, decay: 0.2, sustainLevel: 0.6, releaseTime: 0.15
     });
     audioEngine.loadInstrument({
-        id: '02',
-        name: 'Basic Kick',
-        waveform: 'sine',
-        attack: 0.005,
-        decay: 0.1
+        id: '02', name: 'Basic Kick', waveform: 'sine',
+        volume: 0.8, attack: 0.005, decay: 0.1, sustainLevel: 0.1, releaseTime: 0.05
     });
-    console.log("Default instruments loaded into AudioEngine.");
+    console.log("Default instruments loaded.");
 
-    // Populate forms and set up panel interactions
     if (panelManager) {
-        // Instrument Editor Panel
-        populateInstrumentEditorForm('01', audioEngine, panelManager);
         const instrEditorPanelElement = panelManager.getPanel('instrument-editor-panel')?.panelElement;
         if (instrEditorPanelElement) {
-            const updateButton = instrEditorPanelElement.querySelector('#update-instrument-button');
-            if (updateButton) {
-                updateButton.addEventListener('click', () => {
-                    const currentInstrumentId = '01';
+            populateInstrumentEditorForm(currentEditingInstrumentId, audioEngine, panelManager);
+
+            const loadSelectedButton = instrEditorPanelElement.querySelector('#load-selected-instr-button');
+            if (loadSelectedButton) {
+                loadSelectedButton.addEventListener('click', () => {
+                    const idInput = instrEditorPanelElement.querySelector('#instrument-select-id');
+                    const newIdToLoad = idInput.value.trim();
+                    if (newIdToLoad) {
+                        currentEditingInstrumentId = newIdToLoad;
+                        populateInstrumentEditorForm(currentEditingInstrumentId, audioEngine, panelManager);
+                    } else { alert("Please enter an Instrument ID to load."); }
+                });
+            }
+
+            const updateInstrButton = instrEditorPanelElement.querySelector('#update-instrument-button');
+            if (updateInstrButton) {
+                updateInstrButton.addEventListener('click', () => {
+                    const instrumentIdToUpdate = currentEditingInstrumentId;
                     const waveform = instrEditorPanelElement.querySelector('#inst-waveform').value;
+                    const volume = parseFloat(instrEditorPanelElement.querySelector('#inst-volume').value);
                     const attack = parseFloat(instrEditorPanelElement.querySelector('#inst-attack').value);
                     const decay = parseFloat(instrEditorPanelElement.querySelector('#inst-decay').value);
+                    const sustainLevel = parseFloat(instrEditorPanelElement.querySelector('#inst-sustain').value);
+                    const releaseTime = parseFloat(instrEditorPanelElement.querySelector('#inst-release').value);
 
-                    const existingInstrument = audioEngine.getInstrument(currentInstrumentId);
-                    if (!existingInstrument || existingInstrument.id === 'default' && currentInstrumentId !== 'default') {
-                        console.error(`Cannot update: Original instrument \${currentInstrumentId} not found or is the default fallback.`);
-                        alert(`Error: Instrument \${currentInstrumentId} could not be found for update.`);
-                        return;
+                    let existingInstrument = audioEngine.getInstrument(instrumentIdToUpdate);
+                    const newName = (existingInstrument && existingInstrument.id === instrumentIdToUpdate) ? existingInstrument.name : `Instrument ${instrumentIdToUpdate}`;
+
+                    if (isNaN(volume) || volume < 0 || volume > 1 ||
+                        isNaN(attack) || attack < 0.001 || isNaN(decay) || decay < 0.001 ||
+                        isNaN(sustainLevel) || sustainLevel < 0 || sustainLevel > 1 ||
+                        isNaN(releaseTime) || releaseTime < 0.001 ) {
+                         alert("Error: Invalid instrument parameters. Volume 0-1. Attack/Decay/Release >= 0.001. Sustain 0-1."); return;
                     }
-                    if (isNaN(attack) || attack <= 0 || isNaN(decay) || decay <= 0) {
-                        console.error("Invalid attack or decay value. Must be positive numbers > 0.");
-                        alert("Error: Attack and Decay must be positive numbers greater than 0.");
-                        return;
-                    }
-                    const updatedInstrumentData = { ...existingInstrument, waveform, attack, decay };
+                    const updatedInstrumentData = {
+                        id: instrumentIdToUpdate, name: newName,
+                        waveform, volume, attack, decay, sustainLevel, releaseTime
+                    };
                     audioEngine.loadInstrument(updatedInstrumentData);
-                    populateInstrumentEditorForm(currentInstrumentId, audioEngine, panelManager);
-                    alert(`Instrument '\${currentInstrumentId}' updated successfully!`);
+                    populateInstrumentEditorForm(instrumentIdToUpdate, audioEngine, panelManager);
+                    alert(`Instrument '${instrumentIdToUpdate}' updated successfully!`);
                 });
-            } else { console.warn("Update instrument button not found in panel."); }
+            }
         }
 
-        // Project Settings Panel
-        populateProjectSettingsForm(audioEngine, panelManager);
         const projSettingsPanelElement = panelManager.getPanel('project-settings-panel')?.panelElement;
         if (projSettingsPanelElement) {
-            const updateButton = projSettingsPanelElement.querySelector('#update-project-settings-button');
-            if (updateButton) {
-                updateButton.addEventListener('click', () => {
+            populateProjectSettingsForm(audioEngine, panelManager);
+            const updateSettingsButton = projSettingsPanelElement.querySelector('#update-project-settings-button');
+            if (updateSettingsButton) {
+                updateSettingsButton.addEventListener('click', () => {
                     const bpmInput = projSettingsPanelElement.querySelector('#setting-bpm');
                     const newBPM = parseInt(bpmInput.value);
-
                     if (isNaN(newBPM) || newBPM < 20 || newBPM > 999) {
                         alert("Error: BPM must be a number between 20 and 999.");
-                        populateProjectSettingsForm(audioEngine, panelManager); // Reset to current value
-                        return;
+                        populateProjectSettingsForm(audioEngine, panelManager); return;
                     }
                     audioEngine.setBPM(newBPM);
-                    populateProjectSettingsForm(audioEngine, panelManager); // Reflect change in form
-                    alert("Project settings updated successfully!");
+                    populateProjectSettingsForm(audioEngine, panelManager);
+                    alert("Project settings updated!");
                 });
-            } else { console.warn("Update project settings button not found in panel."); }
+            }
+
+            const saveButton = projSettingsPanelElement.querySelector('#save-project-button');
+            if (saveButton) {
+                saveButton.addEventListener('click', () => {
+                    const projectData = gatherProjectData(audioEngine, trackerGrid);
+                    if (projectData) {
+                        try {
+                            localStorage.setItem('thunderbirdChiptuneProject', JSON.stringify(projectData));
+                            alert('Project saved to browser localStorage!');
+                        } catch (e) { alert('Error saving project.'); console.error(e); }
+                    }
+                });
+            }
+
+            const loadButton = projSettingsPanelElement.querySelector('#load-project-button');
+            if (loadButton) {
+                loadButton.addEventListener('click', () => {
+                    try {
+                        const savedDataString = localStorage.getItem('thunderbirdChiptuneProject');
+                        if (savedDataString) {
+                            const projectData = JSON.parse(savedDataString);
+                            applyProjectData(projectData, audioEngine, trackerGrid, panelManager);
+                            alert('Project loaded!');
+                        } else { alert('No saved project found.'); }
+                    } catch (e) { alert('Error loading project.'); console.error(e); }
+                });
+            }
         }
     }
-
-    console.log("Thunderbird Chiptune Composer: Initialization complete with config.");
+    console.log("Thunderbird Chiptune Composer: Initialization complete.");
 }
-
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Thunderbird Chiptune Composer: DOMContentLoaded. Starting initialization process...");
@@ -218,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("Unhandled error during initialization:", error);
         const appContainer = document.getElementById('app-container');
         if (appContainer) {
-            appContainer.innerHTML = '<p style="color: red; text-align: center; margin-top: 50px;">An unexpected error occurred during application startup. Please try refreshing the page.</p>';
+            appContainer.innerHTML = '<p style="color: red; text-align: center; margin-top: 50px;">An unexpected error occurred.</p>';
         }
     });
 });
