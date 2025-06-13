@@ -201,6 +201,20 @@ class TrackerGrid {
         console.error("GetCellData: Invalid row or track index.");
         return null;
     }
+
+    /**
+     * Gets the pattern data for a specific step (row) across all tracks.
+     * @param {number} stepIndex - The row index (step number).
+     * @returns {Array<object>|Array} An array of track data objects for the step, or an empty array if invalid index.
+     */
+    getStepData(stepIndex) {
+        if (stepIndex >= 0 && stepIndex < this.numRows) {
+            return this.patternData[stepIndex];
+        } else {
+            console.warn(`TrackerGrid.getStepData: Invalid stepIndex ${stepIndex}`);
+            return [];
+        }
+    }
 }
 
 export default TrackerGrid;

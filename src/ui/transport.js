@@ -31,6 +31,7 @@ class TransportControl {
     init() {
         this.render();
         this._attachEventListeners();
+        this.syncButtonStates(); // Set initial button states based on audio engine
         console.log("TransportControl initialized.");
     }
 
@@ -85,13 +86,15 @@ class TransportControl {
     handlePlay() {
         console.log("Play button clicked");
         if (this.audioEngine && typeof this.audioEngine.startPlayback === 'function') {
-            this.audioEngine.startPlayback();
-            // Update UI state if needed (e.g., disable play, enable pause/stop)
-            this.buttons['play-button'].disabled = true;
-            this.buttons['pause-button'].disabled = false;
-            this.buttons['stop-button'].disabled = false;
+            if (this.audioEngine.startPlayback()) {
+                this.updateButtonStates({ play: false, pause: true, stop: true });
+            } else {
+                console.error("TransportControl: AudioEngine failed to start playback.");
+                this.updateButtonStates({ play: true, pause: false, stop: false });
+            }
         } else {
-            console.warn("AudioEngine not available or startPlayback not implemented.");
+            console.warn("TransportControl: AudioEngine not available or startPlayback not implemented.");
+            this.updateButtonStates({ play: true, pause: false, stop: false, record: false });
         }
     }
 
@@ -100,21 +103,20 @@ class TransportControl {
      */
     handlePause() {
         console.log("Pause button clicked");
-        // Placeholder for audioEngine.pausePlayback() if that's implemented
         if (this.audioEngine && typeof this.audioEngine.pausePlayback === 'function') {
-            // this.audioEngine.pausePlayback(); // Assuming a pause method might exist
-            console.log("AudioEngine pausePlayback() called (placeholder)");
-        } else if (this.audioEngine && typeof this.audioEngine.stopPlayback === 'function') {
-            // As a fallback, stop might be used if true pause isn't available in a simple engine
-            // this.audioEngine.stopPlayback();
-            console.log("AudioEngine stopPlayback() called as fallback for pause (placeholder)");
+            if (this.audioEngine.pausePlayback()) { // Assuming pausePlayback returns success
+                this.updateButtonStates({ play: true, pause: false, stop: true });
+            } else {
+                // Handle pause failure if necessary, though less common
+                console.warn("TransportControl: AudioEngine pause failed or no change in state.");
+                 // Re-sync or set to a known state if pause has complex conditions
+                this.syncButtonStates();
+            }
         } else {
-            console.warn("AudioEngine not available or pause/stop functionality not implemented.");
+            console.warn("TransportControl: AudioEngine not available or pausePlayback not implemented.");
+            // Fallback or error state for buttons
+            this.updateButtonStates({ play: true, pause: false, stop: false, record: false });
         }
-        // Update UI state
-        this.buttons['play-button'].disabled = false;
-        this.buttons['pause-button'].disabled = true;
-        // Stop button might remain enabled or be handled differently based on desired pause behavior
     }
 
     /**
@@ -123,13 +125,17 @@ class TransportControl {
     handleStop() {
         console.log("Stop button clicked");
         if (this.audioEngine && typeof this.audioEngine.stopPlayback === 'function') {
-            this.audioEngine.stopPlayback();
-             // Update UI state
-            this.buttons['play-button'].disabled = false;
-            this.buttons['pause-button'].disabled = true;
-            this.buttons['stop-button'].disabled = true;
+            if (this.audioEngine.stopPlayback()) { // Assuming stopPlayback returns success
+                this.updateButtonStates({ play: true, pause: false, stop: false });
+            } else {
+                // Handle stop failure if necessary, though less common
+                 console.warn("TransportControl: AudioEngine stop failed (this is unusual).");
+                // Re-sync, or set to a known state
+                this.syncButtonStates();
+            }
         } else {
-            console.warn("AudioEngine not available or stopPlayback not implemented.");
+            console.warn("TransportControl: AudioEngine not available or stopPlayback not implemented.");
+            this.updateButtonStates({ play: true, pause: false, stop: false, record: false });
         }
     }
 
@@ -159,6 +165,30 @@ class TransportControl {
         if (states.record !== undefined && this.buttons['record-button']) {
             this.buttons['record-button'].disabled = !states.record;
         }
+        console.log("TransportControl: Button states updated", states);
+    }
+
+    /**
+     * Synchronizes button states with the AudioEngine's current playback state.
+     */
+    syncButtonStates() {
+        if (!this.audioEngine || !this.audioEngine.audioContext) {
+            this.updateButtonStates({ play: false, pause: false, stop: false, record: false }); // All disabled
+            console.warn("TransportControl.syncButtonStates: AudioEngine not available.");
+            return;
+        }
+
+        const isPlaying = this.audioEngine.isPlaying;
+        const isPaused = this.audioEngine.isPaused; // Assuming isPaused is set correctly by audioEngine
+
+        if (isPlaying && !isPaused) { // Actively playing
+            this.updateButtonStates({ play: false, pause: true, stop: true, record: false });
+        } else if (isPaused) { // Paused
+            this.updateButtonStates({ play: true, pause: false, stop: true, record: false });
+        } else { // Stopped
+            this.updateButtonStates({ play: true, pause: false, stop: false, record: false });
+        }
+        console.log(`TransportControl.syncButtonStates: isPlaying=${isPlaying}, isPaused=${isPaused}`);
     }
 }
 
