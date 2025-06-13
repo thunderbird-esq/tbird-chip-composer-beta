@@ -1,1 +1,39 @@
-// Placeholder content for index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thunderbird Chiptune Composer</title>
+    <link rel="stylesheet" href="styles/core.css">
+    <link rel="stylesheet" href="styles/fonts.css">
+    <link rel="stylesheet" href="styles/grid.css">
+    <link rel="stylesheet" href="styles/panels.css">
+</head>
+<body>
+    <div id="app-container">
+        <header id="app-header"></header>
+        <main id="main-content">
+            <div id="tracker-grid-container"></div>
+            <div id="control-panels-container"></div>
+        </main>
+        <div id="transport-controls-container"></div>
+        <div id="visualizer-container"></div>
+        <footer id="app-footer"></footer>
+    </div>
+
+    <script src="src/constants.js" defer></script>
+    <script src="src/audio/engine.js" defer></script>
+    <script src="src/audio/generators.js" defer></script>
+    <script src="src/audio/instruments.js" defer></script>
+    <script src="src/audio/effects.js" defer></script>
+    <script src="src/ui/grid.js" defer></script>
+    <script src="src/ui/panels.js" defer></script>
+    <script src="src/ui/transport.js" defer></script>
+    <script src="src/ui/visualizer.js" defer></script>
+    <script src="src/utils/file-io.js" defer></script>
+    <script src="src/utils/formatters.js" defer></script>
+    <script src="src/utils/midi-export.js" defer></script>
+    <script src="src/utils/midi-import.js" defer></script>
+    <script src="serviceWorker.js" defer></script>
+</body>
+</html>
