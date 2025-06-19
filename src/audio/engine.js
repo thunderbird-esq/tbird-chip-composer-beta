@@ -64,12 +64,7 @@ class AudioEngine {
      * @param {string} url - The URL of the sound file to load.
      */
     async loadSound(url) {
-        console.log(`Placeholder: loadSound(${url})`);
-        // In a real implementation:
-        // const response = await fetch(url);
-        // const arrayBuffer = await response.arrayBuffer();
-        // const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-        // return audioBuffer;
+        console.warn(`Sample loading is not yet implemented. Attempted to load: ${url}`);
         return null;
     }
 
@@ -79,16 +74,12 @@ class AudioEngine {
      * @param {number} time - The AudioContext time at which to start playing.
      */
     playSound(buffer, time) {
-        console.log(`Placeholder: playSound(buffer, ${time})`);
-        if (!this.audioContext || !buffer) {
-            console.error("AudioContext not initialized or buffer not provided.");
+        console.warn(`Sample playback is not yet implemented. Attempted to play buffer at time: ${time}`);
+        // Minimal check to avoid further errors if something did try to call it with bad args
+        if (!this.audioContext) {
+            console.error("AudioContext not initialized.");
             return;
         }
-        // In a real implementation:
-        // const source = this.audioContext.createBufferSource();
-        // source.buffer = buffer;
-        // source.connect(this.masterGain);
-        // source.start(time);
     }
 
     /**

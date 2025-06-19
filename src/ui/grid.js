@@ -301,7 +301,6 @@ class TrackerGrid {
 
     findTdForSelectedCell() {
         if (!this.selectedCell || !this.tableElement) {
-            // console.warn("findTdForSelectedCell: No selectedCell or tableElement");
             return null;
         }
         return this.tableElement.querySelector(

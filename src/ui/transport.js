@@ -143,7 +143,7 @@ class TransportControl {
      * Handles the record button click.
      */
     handleRecord() {
-        console.log("Record button clicked (Not Implemented)");
+        console.warn("Record functionality is not yet implemented.");
         // Placeholder for future recording functionality
         // Toggle recording state, update UI, etc.
     }
