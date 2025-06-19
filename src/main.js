@@ -8,6 +8,8 @@ import { PanelManager } from './ui/panels.js';
 import TransportControl from './ui/transport.js';
 import TrackerGrid from './ui/grid.js';
 import Visualizer from './ui/visualizer.js';
+import Song from './song.js';
+import { saveProjectToFile, loadProjectFromFile } from './utils/file-io.js';
 
 let panelManager; // Declare panelManager here to make it accessible
 let trackerGrid = null; // Declare trackerGrid here to make it accessible for save/load
@@ -40,6 +42,9 @@ function populateInstrumentEditorForm(instrumentId, audioEngineInstance, panelMa
     editorPanel.panelElement.querySelector('#inst-decay').value = (instrument.decay !== undefined ? Number(instrument.decay).toFixed(3) : '0.100');
     editorPanel.panelElement.querySelector('#inst-sustain').value = (instrument.sustainLevel !== undefined ? Number(instrument.sustainLevel).toFixed(2) : '0.70');
     editorPanel.panelElement.querySelector('#inst-release').value = (instrument.releaseTime !== undefined ? Number(instrument.releaseTime).toFixed(3) : '0.200');
+    editorPanel.panelElement.querySelector('#inst-filter').value = (instrument.filterFrequency !== undefined ? Number(instrument.filterFrequency) : 800);
+    editorPanel.panelElement.querySelector('#inst-lfo-freq').value = (instrument.lfoFrequency !== undefined ? Number(instrument.lfoFrequency) : 0);
+    editorPanel.panelElement.querySelector('#inst-lfo-depth').value = (instrument.lfoDepth !== undefined ? Number(instrument.lfoDepth) : 0);
 
     currentEditingInstrumentId = instrumentId;
     console.log(`Populated instrument editor form for instrument ID: "${instrumentId}" (Actual loaded: "${instrument.id}")`);
@@ -72,6 +77,7 @@ function gatherProjectData(audioEngineInstance, trackerGridInstance) {
         bpm: audioEngineInstance.bpm,
         instruments: audioEngineInstance.getInstrumentsData(),
         pattern: trackerGridInstance.getPatternData(),
+        song: audioEngineInstance.song ? { patterns: audioEngineInstance.song.patterns, order: audioEngineInstance.song.order } : null,
         currentEditingInstrumentId: currentEditingInstrumentId,
         savedAt: new Date().toISOString()
     };
@@ -86,6 +92,12 @@ function applyProjectData(data, audioEngineInstance, trackerGridInstance, panelM
     if (data.bpm) audioEngineInstance.setBPM(data.bpm);
     if (data.instruments) audioEngineInstance.loadInstrumentsData(data.instruments);
     if (data.pattern) trackerGridInstance.setPatternData(data.pattern);
+    if (data.song) {
+        const s = new Song();
+        s.patterns = data.song.patterns;
+        s.order = data.song.order;
+        audioEngineInstance.setSong(s);
+    }
     if (data.currentEditingInstrumentId) currentEditingInstrumentId = data.currentEditingInstrumentId;
     else currentEditingInstrumentId = '01'; // Fallback if not in saved data
 
@@ -131,6 +143,16 @@ async function loadConfigAndInitialize() {
         console.log("TrackerGrid initialized.");
         audioEngine.setTrackerGrid(trackerGrid);
         audioEngine.setOnStepChange((step) => { if (trackerGrid) trackerGrid.setPlayingRow(step); });
+        const song = new Song();
+        song.addPattern(trackerGrid.getPatternData());
+        audioEngine.setSong(song);
+        const seqPanel = panelManager.getPanel('pattern-sequencer-panel')?.panelElement;
+        if (seqPanel) {
+            seqPanel.querySelector('#add-pattern-button').addEventListener('click', () => {
+                song.addPattern(trackerGrid.getPatternData());
+                alert('Pattern added to song.');
+            });
+        }
     } else { console.error("Tracker grid container not found."); }
 
     const transportContainer = document.getElementById('transport-controls-container');
@@ -192,6 +214,9 @@ async function loadConfigAndInitialize() {
                     const decay = parseFloat(instrEditorPanelElement.querySelector('#inst-decay').value);
                     const sustainLevel = parseFloat(instrEditorPanelElement.querySelector('#inst-sustain').value);
                     const releaseTime = parseFloat(instrEditorPanelElement.querySelector('#inst-release').value);
+                    const filterFrequency = parseFloat(instrEditorPanelElement.querySelector('#inst-filter').value);
+                    const lfoFrequency = parseFloat(instrEditorPanelElement.querySelector('#inst-lfo-freq').value);
+                    const lfoDepth = parseFloat(instrEditorPanelElement.querySelector('#inst-lfo-depth').value);
 
                     let existingInstrument = audioEngine.getInstrument(instrumentIdToUpdate);
                     const newName = (existingInstrument && existingInstrument.id === instrumentIdToUpdate) ? existingInstrument.name : `Instrument ${instrumentIdToUpdate}`;
@@ -199,16 +224,57 @@ async function loadConfigAndInitialize() {
                     if (isNaN(volume) || volume < 0 || volume > 1 ||
                         isNaN(attack) || attack < 0.001 || isNaN(decay) || decay < 0.001 ||
                         isNaN(sustainLevel) || sustainLevel < 0 || sustainLevel > 1 ||
-                        isNaN(releaseTime) || releaseTime < 0.001 ) {
-                         alert("Error: Invalid instrument parameters. Volume 0-1. Attack/Decay/Release >= 0.001. Sustain 0-1."); return;
+                        isNaN(releaseTime) || releaseTime < 0.001 ||
+                        isNaN(filterFrequency) || filterFrequency < 100 ||
+                        isNaN(lfoFrequency) || lfoFrequency < 0 ||
+                        isNaN(lfoDepth) || lfoDepth < 0 || lfoDepth > 1 ) {
+                         alert("Error: Invalid instrument parameters."); return;
                     }
                     const updatedInstrumentData = {
                         id: instrumentIdToUpdate, name: newName,
-                        waveform, volume, attack, decay, sustainLevel, releaseTime
+                        waveform, volume, attack, decay, sustainLevel, releaseTime,
+                        filterFrequency, lfoFrequency, lfoDepth
                     };
                     audioEngine.loadInstrument(updatedInstrumentData);
                     populateInstrumentEditorForm(instrumentIdToUpdate, audioEngine, panelManager);
                     alert(`Instrument '${instrumentIdToUpdate}' updated successfully!`);
+                });
+            }
+
+            const addInstrButton = instrEditorPanelElement.querySelector('#add-instrument-button');
+            if (addInstrButton) {
+                addInstrButton.addEventListener('click', () => {
+                    const newId = instrEditorPanelElement.querySelector('#instrument-select-id').value.trim();
+                    if (!newId) { alert('Enter an ID to add.'); return; }
+                    const data = {
+                        id: newId,
+                        name: `Instrument ${newId}`,
+                        waveform: 'sine',
+                        volume: 0.7,
+                        attack: 0.01,
+                        decay: 0.1,
+                        sustainLevel: 0.7,
+                        releaseTime: 0.2,
+                        filterFrequency: 800,
+                        lfoFrequency: 0,
+                        lfoDepth: 0
+                    };
+                    audioEngine.loadInstrument(data);
+                    populateInstrumentEditorForm(newId, audioEngine, panelManager);
+                    alert('Instrument added.');
+                });
+            }
+
+            const deleteInstrButton = instrEditorPanelElement.querySelector('#delete-instrument-button');
+            if (deleteInstrButton) {
+                deleteInstrButton.addEventListener('click', () => {
+                    const id = currentEditingInstrumentId;
+                    if (id && audioEngine.instruments.has(id)) {
+                        audioEngine.instruments.delete(id);
+                        currentEditingInstrumentId = '01';
+                        populateInstrumentEditorForm(currentEditingInstrumentId, audioEngine, panelManager);
+                        alert('Instrument deleted.');
+                    }
                 });
             }
         }
@@ -255,6 +321,29 @@ async function loadConfigAndInitialize() {
                             alert('Project loaded!');
                         } else { alert('No saved project found.'); }
                     } catch (e) { alert('Error loading project.'); console.error(e); }
+                });
+            }
+
+            const exportButton = projSettingsPanelElement.querySelector('#export-project-button');
+            if (exportButton) {
+                exportButton.addEventListener('click', () => {
+                    const data = gatherProjectData(audioEngine, trackerGrid);
+                    if (data) { saveProjectToFile(data); }
+                });
+            }
+
+            const importInput = projSettingsPanelElement.querySelector('#import-project-input');
+            const importBtn = projSettingsPanelElement.querySelector('#import-project-button');
+            if (importBtn && importInput) {
+                importBtn.addEventListener('click', () => importInput.click());
+                importInput.addEventListener('change', () => {
+                    const file = importInput.files[0];
+                    if (file) {
+                        loadProjectFromFile(file).then(data => {
+                            applyProjectData(data, audioEngine, trackerGrid, panelManager);
+                            alert('Project imported');
+                        }).catch(err => alert('Import failed')); 
+                    }
                 });
             }
         }

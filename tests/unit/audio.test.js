@@ -1,4 +1,8 @@
-console.log("[TEST] audio.test.js loaded.");
+import audioEngine from '../../src/audio/engine.js';
+console.log('[TEST] audio.test.js loaded.');
 export function testAudioSystem() {
-  console.log("Audio system test not yet implemented.");
+    const freq = audioEngine.parseNoteString('C-4');
+    if (typeof freq !== 'number') throw new Error('parseNoteString failed');
+    console.log('parseNoteString C-4 ->', freq);
 }
+testAudioSystem();
