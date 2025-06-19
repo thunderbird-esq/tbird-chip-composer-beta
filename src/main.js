@@ -167,10 +167,13 @@ async function loadConfigAndInitialize() {
 
     if (panelManager) {
         const instrEditorPanelElement = panelManager.getPanel('instrument-editor-panel')?.panelElement;
+        console.log("Attempting to set up Instrument Editor listeners. Panel element:", instrEditorPanelElement);
         if (instrEditorPanelElement) {
+            console.log("Instrument Editor panel element found. Querying for internal elements...");
             populateInstrumentEditorForm(currentEditingInstrumentId, audioEngine, panelManager);
 
             const loadSelectedButton = instrEditorPanelElement.querySelector('#load-selected-instr-button');
+            console.log("#load-selected-instr-button:", loadSelectedButton);
             if (loadSelectedButton) {
                 loadSelectedButton.addEventListener('click', () => {
                     const idInput = instrEditorPanelElement.querySelector('#instrument-select-id');
@@ -183,6 +186,7 @@ async function loadConfigAndInitialize() {
             }
 
             const updateInstrButton = instrEditorPanelElement.querySelector('#update-instrument-button');
+            console.log("#update-instrument-button:", updateInstrButton);
             if (updateInstrButton) {
                 updateInstrButton.addEventListener('click', () => {
                     const instrumentIdToUpdate = currentEditingInstrumentId;
@@ -214,9 +218,12 @@ async function loadConfigAndInitialize() {
         }
 
         const projSettingsPanelElement = panelManager.getPanel('project-settings-panel')?.panelElement;
+        console.log("Attempting to set up Project Settings listeners. Panel element:", projSettingsPanelElement);
         if (projSettingsPanelElement) {
+            console.log("Project Settings panel element found. Querying for internal elements...");
             populateProjectSettingsForm(audioEngine, panelManager);
             const updateSettingsButton = projSettingsPanelElement.querySelector('#update-project-settings-button');
+            console.log("#update-project-settings-button:", updateSettingsButton);
             if (updateSettingsButton) {
                 updateSettingsButton.addEventListener('click', () => {
                     const bpmInput = projSettingsPanelElement.querySelector('#setting-bpm');
@@ -232,6 +239,7 @@ async function loadConfigAndInitialize() {
             }
 
             const saveButton = projSettingsPanelElement.querySelector('#save-project-button');
+            console.log("#save-project-button:", saveButton);
             if (saveButton) {
                 saveButton.addEventListener('click', () => {
                     const projectData = gatherProjectData(audioEngine, trackerGrid);
@@ -245,6 +253,7 @@ async function loadConfigAndInitialize() {
             }
 
             const loadButton = projSettingsPanelElement.querySelector('#load-project-button');
+            console.log("#load-project-button:", loadButton);
             if (loadButton) {
                 loadButton.addEventListener('click', () => {
                     try {
@@ -261,9 +270,13 @@ async function loadConfigAndInitialize() {
 
         // Setup for Sample Library Panel
         const samplePanelElement = panelManager.getPanel('sample-library-panel')?.panelElement;
+        console.log("Attempting to set up Sample Library listeners. Panel element:", samplePanelElement);
         if (samplePanelElement) {
+            console.log("Sample Library panel element found. Querying for internal elements...");
             const loadSampleButton = samplePanelElement.querySelector('#load-test-sample-button');
+            console.log("#load-test-sample-button:", loadSampleButton);
             const playSampleButton = samplePanelElement.querySelector('#play-test-sample-button');
+            console.log("#play-test-sample-button:", playSampleButton);
             const statusElement = samplePanelElement.querySelector('#sample-library-status');
             const testSampleUrl = 'assets/audio/ui/click.wav'; // Define URL for easy reuse
 
