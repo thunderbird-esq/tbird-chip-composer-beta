@@ -76,8 +76,35 @@ class TrackerGrid {
     render() {
         this.containerElement.innerHTML = ''; // Clear previous content
 
+        // Add system.css title bar
+        const titleBar = document.createElement('div');
+        titleBar.classList.add('title-bar');
+
+        const closeButton = document.createElement('button');
+        closeButton.setAttribute('aria-label', 'Close');
+        closeButton.classList.add('close', 'hidden'); // Hidden for now
+        titleBar.appendChild(closeButton);
+
+        const titleElement = document.createElement('h1');
+        titleElement.classList.add('title');
+        titleElement.textContent = 'Tracker Grid'; // Or make this dynamic if needed
+        titleBar.appendChild(titleElement);
+
+        const resizeButton = document.createElement('button');
+        resizeButton.setAttribute('aria-label', 'Resize');
+        resizeButton.classList.add('resize', 'hidden'); // Hidden for now
+        titleBar.appendChild(resizeButton);
+        this.containerElement.appendChild(titleBar);
+
+        // Create a content pane wrapper for the table, if system.css window requires it
+        // For now, assuming .window > .title-bar + table is okay.
+        // If .window-pane is strictly needed for scrollbars or padding, add it here.
+        // const tableContainer = document.createElement('div');
+        // tableContainer.classList.add('window-pane'); // Potentially add this
+        // this.containerElement.appendChild(tableContainer);
+
         const table = document.createElement('table');
-        table.classList.add('tracker-grid-table');
+        table.classList.add('tracker-grid-table'); // Keep custom table class for specific grid styling
 
         // Create table header
         const thead = table.createTHead();
@@ -157,6 +184,8 @@ class TrackerGrid {
         }
 
         this.tableElement = table; // Store reference to the table
+        // if (tableContainer) tableContainer.appendChild(this.tableElement);
+        // else
         this.containerElement.appendChild(this.tableElement);
         // console.log("TrackerGrid rendered."); // Reduce console noise
     }
@@ -203,15 +232,18 @@ class TrackerGrid {
         input.value = value === "---" ? "" : value;
         input.classList.add('grid-cell-input');
         // Styles are better in CSS, but for quick setup:
-        input.style.width = '100%';
+        input.style.width = '100%'; // Keep these for now as system.css might not cover 100% cell fill
         input.style.height = '100%';
-        input.style.border = 'none';
+        input.style.border = 'none'; // system.css input has a border, this might override it.
+                                     // If we want system.css border, remove this line.
+                                     // For a seamless grid edit, 'none' is often preferred.
         input.style.padding = '0';
         input.style.margin = '0';
         input.style.boxSizing = 'border-box';
         input.style.textAlign = 'center';
-        input.style.backgroundColor = '#252530'; // Distinct editing background
-        input.style.color = '#e0e0e0';       // Ensure text is visible
+        // backgroundColor and color will be inherited or picked from system.css input:focus-visible
+        // input.style.backgroundColor = '#252530';
+        // input.style.color = '#e0e0e0';
 
         input.addEventListener('blur', () => this._commitEdit());
         input.addEventListener('keydown', (e) => {

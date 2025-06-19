@@ -52,8 +52,11 @@ class TransportControl {
         buttonConfigs.forEach(config => {
             const button = document.createElement('button');
             button.id = config.id;
-            button.classList.add('transport-button');
-            // button.textContent = config.text; // Using icons primarily
+            button.classList.add('btn'); // Use .btn from system.css
+            // system.css .btn does not explicitly use <span> for icon and text,
+            // but this structure should still render. The font might be Chicago_12 if not overridden.
+            // For system.css, simpler might be: button.textContent = `${config.icon} ${config.text}`;
+            // However, keeping spans allows for potential individual styling of icon/text if needed later.
             button.innerHTML = `<span class="icon">${config.icon}</span> <span class="text">${config.text}</span>`;
             if (config.disabled) {
                 button.disabled = true;

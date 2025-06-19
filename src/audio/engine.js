@@ -8,6 +8,10 @@ class AudioEngine {
         this.audioContext = null;
         this.masterGain = null;
         this.loadedSamples = new Map(); // Added for storing loaded audio buffers
+        this.mediaRecorder = null;
+        this.recordedChunks = [];
+        this.audioDestinationNode = null;
+        this.selectedMimeType = '';
         // this.playbackIntervalId = null; // Removed
         this.currentStep = 0;
         this.trackerGrid = null; // To hold a reference to the grid
@@ -53,12 +57,83 @@ class AudioEngine {
             this.masterGain.gain.setValueAtTime(0.7, this.audioContext.currentTime); // Default volume
 
             console.log("AudioEngine initialized successfully.");
+
+            // Initialize recording capabilities
+            if (!this.initRecording()) {
+                console.warn("AudioEngine: Recording initialization failed. Recording will not be available.");
+                // Depending on requirements, you might choose to not let this be a hard failure of init()
+            }
+
             return true;
         } catch (e) {
             console.error("Error initializing AudioContext:", e);
             return false;
         }
     }
+
+    /**
+     * Initializes MediaRecorder and related nodes.
+     * @returns {boolean} True if recording setup was successful, false otherwise.
+     */
+    initRecording() {
+        if (!this.audioContext || !this.masterGain) {
+            console.error("AudioEngine.initRecording: AudioContext or MasterGain not initialized.");
+            return false;
+        }
+
+        try {
+            this.audioDestinationNode = this.audioContext.createMediaStreamDestination();
+            this.masterGain.connect(this.audioDestinationNode); // Connect masterGain to this new destination
+                                                              // masterGain is already connected to audioContext.destination for playback
+        } catch (e) {
+            console.error("AudioEngine.initRecording: Error creating or connecting MediaStreamAudioDestinationNode.", e);
+            return false;
+        }
+
+        if (!window.MediaRecorder) {
+            console.error("AudioEngine.initRecording: MediaRecorder API not supported in this browser.");
+            return false;
+        }
+
+        const preferredMimeTypes = [
+            'audio/wav',        // Often not supported directly by MediaRecorder, but ideal if it were
+            'audio/webm;codecs=opus',
+            'audio/ogg;codecs=opus',
+            'audio/mp4;codecs=aac', // Added as another common option
+            'audio/webm',
+            'audio/ogg'
+        ];
+
+        for (const type of preferredMimeTypes) {
+            if (MediaRecorder.isTypeSupported(type)) {
+                this.selectedMimeType = type;
+                break;
+            }
+        }
+
+        if (!this.selectedMimeType) {
+            // Try a very basic one as a last resort if available
+            if (MediaRecorder.isTypeSupported('audio/webm')) { // Basic webm often supported
+                 this.selectedMimeType = 'audio/webm';
+            } else {
+                console.error("AudioEngine.initRecording: No suitable MIME type found for MediaRecorder from preferred list or basic fallback.");
+                // Attempt to create MediaRecorder with no specific MIME type to see if browser can pick one.
+                // This is a long shot and might result in an unplayable format or an error later.
+                try {
+                    const testRec = new MediaRecorder(this.audioDestinationNode.stream);
+                    this.selectedMimeType = testRec.mimeType || 'unknown (browser default)';
+                     console.warn(`AudioEngine.initRecording: Defaulting to browser-selected MIME type: ${this.selectedMimeType}. This may not be optimal.`);
+                } catch (e) {
+                    console.error("AudioEngine.initRecording: Could not even initialize MediaRecorder with browser default MIME type.", e);
+                    return false;
+                }
+            }
+        }
+
+        console.log(`AudioEngine.initRecording: Recording setup complete. Selected MIME type: ${this.selectedMimeType}`);
+        return true;
+    }
+
 
     /**
      * Placeholder for loading a sound file.

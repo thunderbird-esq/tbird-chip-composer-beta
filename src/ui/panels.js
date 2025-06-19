@@ -36,15 +36,33 @@ class UIPanel {
 
         this.panelElement = document.createElement('div');
         this.panelElement.id = this.id;
-        this.panelElement.classList.add('ui-panel');
+        this.panelElement.classList.add('window'); // Use .window class
 
         const titleBar = document.createElement('div');
-        titleBar.classList.add('panel-title-bar');
-        titleBar.textContent = this.title;
+        titleBar.classList.add('title-bar');
+
+        // Add system.css standard window buttons (non-functional for now)
+        const closeButton = document.createElement('button');
+        closeButton.setAttribute('aria-label', 'Close');
+        closeButton.classList.add('close');
+        closeButton.classList.add('hidden'); // Hide if not functional yet
+        titleBar.appendChild(closeButton);
+
+        const titleElement = document.createElement('h1'); // Or h2, h3 depending on desired hierarchy
+        titleElement.classList.add('title');
+        titleElement.textContent = this.title;
+        titleBar.appendChild(titleElement);
+
+        const resizeButton = document.createElement('button');
+        resizeButton.setAttribute('aria-label', 'Resize');
+        resizeButton.classList.add('resize');
+        resizeButton.classList.add('hidden'); // Hide if not functional yet
+        titleBar.appendChild(resizeButton);
+
         this.panelElement.appendChild(titleBar);
 
         const contentArea = document.createElement('div');
-        contentArea.classList.add('panel-content');
+        contentArea.classList.add('window-pane'); // Use .window-pane class
 
         if (typeof this.contentElement === 'string') {
             contentArea.innerHTML = this.contentElement;
@@ -68,7 +86,7 @@ class UIPanel {
             console.warn(`Panel ${this.id} has not been rendered yet. Cannot update content.`);
             return;
         }
-        const contentArea = this.panelElement.querySelector('.panel-content');
+        const contentArea = this.panelElement.querySelector('.window-pane'); // Ensure we query new class
         if (contentArea) {
             contentArea.innerHTML = ''; // Clear existing content
             if (typeof newContentElement === 'string') {
@@ -174,39 +192,49 @@ class PanelManager {
             id: 'instrument-editor-panel',
             title: 'Instrument Editor',
             contentElement: `
-                <div id="instrument-editor-content">
-                    <div>
-                        <label for="instrument-select-id">Edit Instrument ID:</label>
+                <div id="instrument-editor-content" style="padding: 5px;">
+                    <div class="field-row">
+                        <label for="instrument-select-id">Edit ID:</label>
                         <input type="text" id="instrument-select-id" value="01" size="3">
-                        <button id="load-selected-instr-button">Load to Edit</button>
-                        Current: <strong id="editing-inst-id-display">--</strong> (<span id="editing-inst-name-display">--</span>)
+                        <button id="load-selected-instr-button" class="btn">Load</button>
                     </div>
-                    <hr>
+                    <div class="field-row">
+                        <span>Current: <strong id="editing-inst-id-display">--</strong> (<span id="editing-inst-name-display">--</span>)</span>
+                    </div>
+                    <hr class="separator">
                     <div id="instrument-details-form">
-                        <label for="inst-waveform">Waveform:</label>
-                        <select id="inst-waveform">
-                            <option value="sine">Sine</option>
-                            <option value="square">Square</option>
-                            <option value="sawtooth">Sawtooth</option>
-                            <option value="triangle">Triangle</option>
-                        </select><br>
-
-                        <label for="inst-volume">Volume (0-1):</label>
-                        <input type="number" id="inst-volume" step="0.01" min="0" max="1" value="0.7"><br>
-
-                        <label for="inst-attack">Attack (s):</label>
-                        <input type="number" id="inst-attack" step="0.001" min="0.001" value="0.01"><br>
-
-                        <label for="inst-decay">Decay (s):</label>
-                        <input type="number" id="inst-decay" step="0.001" min="0.001" value="0.1"><br>
-
-                        <label for="inst-sustain">Sustain Level (0-1):</label>
-                        <input type="number" id="inst-sustain" step="0.01" min="0" max="1" value="0.7"><br>
-
-                        <label for="inst-release">Release (s):</label>
-                        <input type="number" id="inst-release" step="0.001" min="0.001" value="0.2"><br>
-
-                        <button id="update-instrument-button">Update Selected Instrument</button>
+                        <div class="field-row">
+                            <label for="inst-waveform">Waveform:</label>
+                            <select id="inst-waveform">
+                                <option value="sine">Sine</option>
+                                <option value="square">Square</option>
+                                <option value="sawtooth">Sawtooth</option>
+                                <option value="triangle">Triangle</option>
+                            </select>
+                        </div>
+                        <div class="field-row">
+                            <label for="inst-volume">Volume (0-1):</label>
+                            <input type="number" id="inst-volume" step="0.01" min="0" max="1" value="0.7">
+                        </div>
+                        <div class="field-row">
+                            <label for="inst-attack">Attack (s):</label>
+                            <input type="number" id="inst-attack" step="0.001" min="0.001" value="0.01">
+                        </div>
+                        <div class="field-row">
+                            <label for="inst-decay">Decay (s):</label>
+                            <input type="number" id="inst-decay" step="0.001" min="0.001" value="0.1">
+                        </div>
+                        <div class="field-row">
+                            <label for="inst-sustain">Sustain (0-1):</label>
+                            <input type="number" id="inst-sustain" step="0.01" min="0" max="1" value="0.7">
+                        </div>
+                        <div class="field-row">
+                            <label for="inst-release">Release (s):</label>
+                            <input type="number" id="inst-release" step="0.001" min="0.001" value="0.2">
+                        </div>
+                        <div class="field-row" style="justify-content: flex-end; margin-top:10px;">
+                            <button id="update-instrument-button" class="btn btn-default">Update Instrument</button>
+                        </div>
                     </div>
                 </div>
             `
@@ -216,18 +244,24 @@ class PanelManager {
             id: 'project-settings-panel',
             title: 'Project Settings',
             contentElement: `
-                <div id="project-settings-content">
-                    <label for="project-name">Project Name:</label>
-                    <input type="text" id="project-name" value="My Chiptune"><br><br>
-
-                    <label for="setting-bpm">BPM (Beats Per Minute):</label>
-                    <input type="number" id="setting-bpm" step="1" min="20" max="999" value="120"><br><br>
-
-                    <button id="update-project-settings-button">Update Settings</button>
-                    <hr>
-                    <button id="save-project-button">Save Project</button>
-                    <button id="load-project-button">Load Project</button>
-                    <p><small>Project Name is not saved yet. Save/Load uses browser's localStorage.</small></p>
+                <div id="project-settings-content" style="padding: 5px;">
+                    <div class="field-row">
+                        <label for="project-name">Project Name:</label>
+                        <input type="text" id="project-name" value="My Chiptune">
+                    </div>
+                    <div class="field-row">
+                        <label for="setting-bpm">BPM:</label>
+                        <input type="number" id="setting-bpm" step="1" min="20" max="999" value="120">
+                    </div>
+                    <div class="field-row" style="justify-content: flex-end; margin-top:10px;">
+                         <button id="update-project-settings-button" class="btn btn-default">Update Settings</button>
+                    </div>
+                    <hr class="separator">
+                    <div class="field-row" style="gap: 10px; margin-top:10px;">
+                        <button id="save-project-button" class="btn">Save Project</button>
+                        <button id="load-project-button" class="btn">Load Project</button>
+                    </div>
+                    <p style="margin-top: 10px;"><small>Project Name is not saved yet. Save/Load uses browser's localStorage.</small></p>
                 </div>
             `
         });
@@ -236,9 +270,11 @@ class PanelManager {
             id: 'sample-library-panel',
             title: 'Sample Library',
             contentElement: `
-                <div>
-                    <button id="load-test-sample-button">Load Test Sample</button>
-                    <button id="play-test-sample-button" disabled>Play Test Sample</button>
+                <div style="padding: 5px;">
+                    <div class="field-row" style="gap: 10px;">
+                        <button id="load-test-sample-button" class="btn">Load Test Sample</button>
+                        <button id="play-test-sample-button" class="btn" disabled>Play Test Sample</button>
+                    </div>
                     <p id="sample-library-status" style="margin-top: 10px;">Sample status: Idle</p>
                 </div>
             `
