@@ -1,3 +1,51 @@
+## Current Status (Post-system.css Integration & Recording Feature)
+
+**Accomplished:**
+
+*   **Integrated `system.css` Styling:**
+    *   Added `styles/system.css` to the project.
+    *   Updated `index.html` to use `system.css` and commented out old core style links (`core.css`, `grid.css`, `panels.css`); kept `fonts.css`.
+    *   Refactored UI components (`src/ui/panels.js`, `src/ui/grid.js`, `src/ui/transport.js`) to use `system.css` classes (e.g., `.window`, `.title-bar`, `.window-pane`, `.btn`, `.field-row`).
+    *   Added supplementary CSS rules to `index.html` (via `<style>` tag) for custom classes like `.selected-cell`, `.playing-row`, and `.btn.recording-active` to ensure they harmonize with `system.css`.
+    *   Created `docs/SYSTEM_CSS_ASSETS.md` to document required font and image assets for `system.css`.
+    *   Updated asset paths within `styles/system.css` to point to local project locations (e.g., `../assets/fonts/system/`, `../assets/images/system/`).
+    *   Fixed the `TODO` for `checkmark-disabled.svg` in `styles/system.css` by replacing the non-standard `svg-load` with a standard `background: url(...)` property.
+    *   Created target directories `assets/fonts/system/` and `assets/images/system/` via bash scripts.
+
+*   **Implemented Full Audio Recording Functionality:**
+    *   **`AudioEngine` Setup (`src/audio/engine.js`):**
+        *   Added properties for `mediaRecorder`, `recordedChunks`, `audioDestinationNode`, `selectedMimeType`, `isRecordingSupported`, and promise handlers for recording stop.
+        *   Implemented `initRecording()`: Initializes `MediaStreamAudioDestinationNode`, connects `masterGain`, checks `MediaRecorder` support, and selects a supported MIME type. Sets `isRecordingSupported` flag.
+        *   `initRecording()` is called from `AudioEngine.init()`.
+        *   Implemented `startRecording()`: Manages recording state, creates `MediaRecorder` instance, sets up `ondataavailable`, `onstop`, `onerror` event handlers.
+        *   Implemented `stopRecording()`: Stops the `MediaRecorder` and returns a promise that resolves with the recorded audio `Blob` or rejects on error.
+    *   **`TransportControl` Integration (`src/ui/transport.js`):**
+        *   Modified `handleRecord()`:
+            *   Calls `audioEngine.startRecording()` to start.
+            *   Calls `audioEngine.stopRecording()` to stop, handling the returned promise.
+            *   On successful recording, prompts user to download the recorded audio `Blob` with a generated filename (including timestamp and correct extension based on MIME type).
+        *   Enhanced UI feedback:
+            *   Added a `#global-status-message` div to `index.html`.
+            *   `handleRecord()` now updates this status message for starting, processing, download initiation, and errors.
+            *   `syncButtonStates()` now disables the record button and sets a tooltip if `audioEngine.isRecordingSupported` is false.
+
+*   **Documentation Updates:**
+    *   Updated `docs/CODE_MANIFEST.md` to accurately describe the contents and purpose of the `src/utils/` directory.
+
+**Next Steps (Blocked by Asset Sourcing):**
+
+1.  **Copy `system.css` Assets:** Transfer the required font and image assets (as listed in `docs/SYSTEM_CSS_ASSETS.md`) from the `main` branch (specifically from `main::assets/fonts/` for fonts and `main::assets/` for SVGs/PNGs) to the current working branch (`feature/implement-placeholders`) into their designated new locations: `assets/fonts/system/` and `assets/images/system/`.
+2.  **Verify `system.css` Local Asset Loading:** Once assets are in place, thoroughly test the application to ensure all `system.css` styles, fonts, and button/icon images load correctly from their local paths. Check the browser console for any 404 errors related to these assets.
+3.  **Implement Favicon:** Add a favicon to the project.
+4.  **Plan for PWA Icon Integration:** Define requirements and plan for integrating icons needed for Progressive Web App (PWA) manifest (e.g., different sizes for app icons).
+5.  **Address `src/utils/` Files Functionality:** The files `file-io.js`, `formatters.js`, `midi-export.js`, `midi-import.js` currently exist as stubs (linked in `index.html` but likely empty or placeholder). Review their intended functionality and plan/begin implementation.
+6.  **Plan for Full Sample Management Functionality:** The "Sample Library" panel is a placeholder. Design and implement features for loading, managing, and using audio samples.
+7.  **Review and Implement Other Missing Functionalities/Placeholders:** Systematically go through the project (UI, audio features, utils) to identify and implement other features that are currently placeholders or stubs.
+
+**Immediate Blocker/Needs:**
+
+*   **Asset Sourcing:** A reliable method to obtain and place the `system.css` assets (fonts and SVGs/PNGs) into the current feature branch. The previous attempts to use `git checkout main -- <path_to_asset>` within subtasks failed, reporting "fatal: invalid reference: main". This indicates the subtask execution environment could not access the `main` branch as named or the files don't exist there at the specified paths. Without these assets, the `system.css` theme will not render correctly.
+
 // Placeholder content for DEVELOPMENT_LOG.md
 
 
