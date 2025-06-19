@@ -5,6 +5,7 @@ const ASSETS = [
   '/styles/core.css',
   '/styles/system.css',
   '/main.bundle.js',
+  '/src/main.js',
   '/src/audio/engine.js',
   '/src/audio/effects-tracker.js',
   '/src/audio/effects.js',

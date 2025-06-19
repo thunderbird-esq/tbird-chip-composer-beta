@@ -38,11 +38,15 @@ This is the development sandbox for Thunderbird, a web-based chiptune composer. 
 - `npm install` to fetch the optional `http-server` dependency
 
 ## Getting Started
-
 1.  **Install Dependencies**: Run `npm install` to fetch the optional dev server.
 2.  **Launch**: Either open `index.html` directly or run `npx http-server -p 8080` (or `python3 -m http.server`) and navigate to `http://localhost:8080`.
 3.  **Explore**: The application will load with a default pattern and instruments.
 4.  **Experiment**: Try entering notes, changing instrument sounds, and using playback controls.
+=======
+1.  **Launch**: Open `index.html` in a web browser. Running `python3 -m http.server` from the project directory is recommended for local testing.
+2.  **Explore**: The application will load with a default pattern and instruments.
+3.  **Experiment**: Try entering notes, changing instrument sounds, and using playback controls.
+
 
 ## How to Use
 
