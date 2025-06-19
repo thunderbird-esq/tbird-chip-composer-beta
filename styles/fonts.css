@@ -5,6 +5,38 @@
     font-style: normal;
 }
 
+@font-face {
+    font-family: 'ChicagoFLF';
+    src: url('../assets/fonts/ChicagoFLF.woff2') format('woff2'),
+         url('../assets/fonts/ChicagoFLF.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'ChiKareGo2';
+    src: url('../assets/fonts/ChiKareGo2.woff2') format('woff2'),
+         url('../assets/fonts/ChiKareGo2.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'FindersKeepers';
+    src: url('../assets/fonts/FindersKeepers.woff2') format('woff2'),
+         url('../assets/fonts/FindersKeepers.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Monaco';
+    src: url('../assets/fonts/monaco.woff2') format('woff2'),
+         url('../assets/fonts/monaco.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
 body {
     font-family: 'PressStart2P', monospace;
 }
