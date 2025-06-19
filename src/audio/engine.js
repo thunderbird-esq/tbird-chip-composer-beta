@@ -12,6 +12,11 @@ class AudioEngine {
         this.recordedChunks = [];
         this.audioDestinationNode = null;
         this.selectedMimeType = '';
+        this.isEngineRecording = false;
+        this.onRecordingStopPromise = null;
+        this.resolveRecordingStopPromise = null;
+        this.rejectRecordingStopPromise = null;
+        this.isRecordingSupported = false; // Initialize new property
         // this.playbackIntervalId = null; // Removed
         this.currentStep = 0;
         this.trackerGrid = null; // To hold a reference to the grid
@@ -76,6 +81,7 @@ class AudioEngine {
      * @returns {boolean} True if recording setup was successful, false otherwise.
      */
     initRecording() {
+        this.isRecordingSupported = false; // Default to false, set true on success
         if (!this.audioContext || !this.masterGain) {
             console.error("AudioEngine.initRecording: AudioContext or MasterGain not initialized.");
             return false;
@@ -84,7 +90,6 @@ class AudioEngine {
         try {
             this.audioDestinationNode = this.audioContext.createMediaStreamDestination();
             this.masterGain.connect(this.audioDestinationNode); // Connect masterGain to this new destination
-                                                              // masterGain is already connected to audioContext.destination for playback
         } catch (e) {
             console.error("AudioEngine.initRecording: Error creating or connecting MediaStreamAudioDestinationNode.", e);
             return false;
@@ -92,7 +97,7 @@ class AudioEngine {
 
         if (!window.MediaRecorder) {
             console.error("AudioEngine.initRecording: MediaRecorder API not supported in this browser.");
-            return false;
+            return false; // isRecordingSupported remains false
         }
 
         const preferredMimeTypes = [
@@ -125,15 +130,125 @@ class AudioEngine {
                      console.warn(`AudioEngine.initRecording: Defaulting to browser-selected MIME type: ${this.selectedMimeType}. This may not be optimal.`);
                 } catch (e) {
                     console.error("AudioEngine.initRecording: Could not even initialize MediaRecorder with browser default MIME type.", e);
-                    return false;
+                    return false; // isRecordingSupported remains false
                 }
             }
         }
 
+        this.isRecordingSupported = true; // All checks passed, recording is supported
         console.log(`AudioEngine.initRecording: Recording setup complete. Selected MIME type: ${this.selectedMimeType}`);
         return true;
     }
 
+    /**
+     * Starts audio recording.
+     * @returns {boolean} True if recording started successfully, false otherwise.
+     */
+    startRecording() {
+        if (!this.audioDestinationNode || !window.MediaRecorder || !this.selectedMimeType) {
+            console.error("AudioEngine.startRecording: Recording prerequisites not met (audioDestinationNode, MediaRecorder support, or selectedMimeType missing).");
+            return false;
+        }
+
+        if (this.isEngineRecording || (this.mediaRecorder && this.mediaRecorder.state === 'recording')) {
+            console.warn("AudioEngine.startRecording: Already recording.");
+            return false;
+        }
+
+        this.isEngineRecording = true;
+        this.recordedChunks = []; // Clear previous chunks
+
+        try {
+            this.mediaRecorder = new MediaRecorder(this.audioDestinationNode.stream, { mimeType: this.selectedMimeType });
+        } catch (e) {
+            console.error("AudioEngine.startRecording: Failed to create MediaRecorder instance.", e);
+            this.isEngineRecording = false;
+            return false;
+        }
+
+        this.mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                this.recordedChunks.push(event.data);
+            }
+        };
+
+        this.mediaRecorder.onstop = () => {
+            if (this.recordedChunks.length === 0) {
+                console.warn("AudioEngine: Recording stopped, but no data was captured.");
+                if (this.rejectRecordingStopPromise) {
+                    this.rejectRecordingStopPromise(new Error('No data captured during recording.'));
+                }
+            } else {
+                try {
+                    const blob = new Blob(this.recordedChunks, { type: this.selectedMimeType });
+                    console.log("AudioEngine: Recording stopped, blob created successfully.", blob);
+                    if (this.resolveRecordingStopPromise) {
+                        this.resolveRecordingStopPromise(blob);
+                    }
+                } catch (e) {
+                    console.error("AudioEngine: Error creating blob from recorded chunks.", e);
+                    if (this.rejectRecordingStopPromise) {
+                        this.rejectRecordingStopPromise(e);
+                    }
+                }
+            }
+            // Reset promise resolvers
+            this.resolveRecordingStopPromise = null;
+            this.rejectRecordingStopPromise = null;
+            this.onRecordingStopPromise = null;
+            this.mediaRecorder = null; // Allow re-creation for next recording session
+            // this.isEngineRecording is set to false in stopRecording() or onerror.
+        };
+
+        this.mediaRecorder.onerror = (event) => {
+            console.error("AudioEngine.MediaRecorder error:", event.error);
+            this.isEngineRecording = false;
+            if (this.rejectRecordingStopPromise) {
+                this.rejectRecordingStopPromise(event.error);
+            }
+            this.resolveRecordingStopPromise = null;
+            this.rejectRecordingStopPromise = null;
+            this.onRecordingStopPromise = null;
+            this.mediaRecorder = null;
+        };
+
+        try {
+            this.mediaRecorder.start();
+            console.log("AudioEngine: Recording started.");
+        } catch (e) {
+            console.error("AudioEngine.startRecording: Error starting MediaRecorder.", e);
+            this.isEngineRecording = false;
+            this.mediaRecorder = null; // Clean up
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Stops audio recording.
+     * @returns {Promise<Blob>} A promise that resolves with the recorded audio Blob, or rejects on error.
+     */
+    stopRecording() {
+        if (!this.isEngineRecording || !this.mediaRecorder || this.mediaRecorder.state === 'inactive') {
+            const errorMessage = "AudioEngine.stopRecording: Not recording or recorder inactive.";
+            console.warn(errorMessage);
+            return Promise.reject(new Error(errorMessage));
+        }
+
+        this.onRecordingStopPromise = new Promise((resolve, reject) => {
+            this.resolveRecordingStopPromise = resolve;
+            this.rejectRecordingStopPromise = reject;
+        });
+
+        // isEngineRecording should be set to false when the recorder actually stops (in onstop or onerror)
+        // or immediately after calling stop if preferred. Let's set it false here.
+        this.isEngineRecording = false;
+        console.log("AudioEngine: Stopping recording...");
+        this.mediaRecorder.stop(); // The onstop handler will resolve/reject the promise.
+
+        return this.onRecordingStopPromise;
+    }
 
     /**
      * Placeholder for loading a sound file.

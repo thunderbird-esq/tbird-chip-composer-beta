@@ -26,7 +26,11 @@ This directory houses modules responsible for the user interface and user intera
 
 ### `src/utils/`
 
-(This directory is reserved for future utility modules such as file I/O and MIDI handlers. Currently empty.)
+Contains utility modules for various helper functions, such as file operations, data formatting, and MIDI processing. Key files include:
+- **`file-io.js`**: Handles file input/output operations (e.g., for project saving/loading if extended beyond localStorage).
+- **`formatters.js`**: Provides data formatting utilities.
+- **`midi-export.js`**: Logic for exporting project data to MIDI format.
+- **`midi-import.js`**: Logic for importing MIDI data into the project.
 
 ### Root `src/` Files
 

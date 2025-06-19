@@ -147,40 +147,96 @@ class TransportControl {
      * Handles the record button click.
      */
     handleRecord() {
-        this.isRecording = !this.isRecording;
+        const statusEl = document.getElementById('global-status-message');
+
+        if (!this.audioEngine) {
+            console.error("UI: AudioEngine not available for recording.");
+            if (statusEl) statusEl.textContent = 'Error: Audio engine not ready.';
+            alert("Audio engine not ready. Cannot start recording.");
+            return;
+        }
+
+        // Further check if recording is supported at all by the engine
+        if (!this.audioEngine.isRecordingSupported && !this.isRecording) { // only check if trying to start
+            console.error("UI: Recording is not supported by the audio engine (e.g. no MediaRecorder or suitable MIME type).");
+            if (statusEl) statusEl.textContent = 'Error: Recording not supported by browser.';
+            alert("Recording is not supported by your browser or no suitable audio format found.");
+            return;
+        }
+
         const recordButton = this.buttons['record-button'];
 
-        if (recordButton) {
-            const iconElement = recordButton.querySelector('.icon');
-            const textElement = recordButton.querySelector('.text');
-
-            if (this.isRecording) {
-                if (iconElement) iconElement.textContent = '⏹️'; // Change icon to stop-like
-                if (textElement) textElement.textContent = 'Stop Rec';
-                recordButton.classList.add('recording-active');
-                console.log("Recording started");
-                // Potentially disable other buttons like play/pause if needed during recording
-                // this.updateButtonStates({ play: false, pause: false, stop: true, record: true });
-
+        if (!this.isRecording) { // Attempt to START recording
+            if (this.audioEngine.startRecording()) {
+                this.isRecording = true; // Sync UI state with engine
+                if (statusEl) statusEl.textContent = 'Recording started...';
+                console.log("UI: Recording started via AudioEngine.");
             } else {
-                if (iconElement) iconElement.textContent = '⏺️'; // Revert icon
-                if (textElement) textElement.textContent = 'Record';
-                recordButton.classList.remove('recording-active');
-                console.log("Recording stopped");
-                // Re-enable other buttons based on current playback state (e.g., call syncButtonStates)
-                // this.syncButtonStates(); // This will set record to false, which is fine.
+                this.isRecording = false; // Ensure UI state reflects failure
+                if (statusEl) statusEl.textContent = 'Error: Could not start recording. Check console.';
+                console.error("UI: AudioEngine failed to start recording.");
+                alert("Failed to start recording. See console for details.");
             }
-            // Explicitly ensure record button itself is always enabled after click.
-            // recordButton.disabled = false; // This might be handled by syncButtonStates or updateButtonStates
+            this.syncButtonStates(); // Update all button states and appearances
+        } else { // Attempt to STOP recording
+            if (recordButton) {
+                const textElement = recordButton.querySelector('.text');
+                if (textElement) textElement.textContent = 'Processing...';
+                recordButton.disabled = true; // Disable while processing
+                if (statusEl) statusEl.textContent = 'Processing audio...';
+            }
+
+            this.audioEngine.stopRecording()
+                .then(blob => {
+                    console.log("UI: Recording stopped by AudioEngine, blob received.", blob);
+                    this.isRecording = false; // Sync UI state
+
+                    if (blob && blob.size > 0) {
+                        const mimeType = this.audioEngine.selectedMimeType || blob.type || 'audio/wav';
+                        let extension = 'wav'; // Default extension
+                        if (mimeType.includes('webm')) extension = 'webm';
+                        else if (mimeType.includes('ogg')) extension = 'ogg';
+                        else if (mimeType.includes('mp4')) extension = 'mp4';
+
+                        const specificExtension = mimeType.split('/')[1]?.split(';')[0];
+                        if (specificExtension) extension = specificExtension;
+
+                        const filename = `thunderbird-recording-${new Date().toISOString().replace(/[:.]/g, '-')}.${extension}`;
+
+                        const objectUrl = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = objectUrl;
+                        a.download = filename;
+
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(objectUrl);
+
+                        console.log(`UI: Download initiated for ${filename}`);
+                        if (statusEl) {
+                            statusEl.textContent = `Download initiated: ${filename}`;
+                            setTimeout(() => {
+                                if (statusEl.textContent === `Download initiated: ${filename}`) statusEl.textContent = '';
+                            }, 5000);
+                        }
+                        // alert(`Recording saved as ${filename}`); // Alert might be too intrusive now with status message
+                    } else {
+                        console.warn("UI: Recording stopped, but blob is empty or invalid.");
+                        if (statusEl) statusEl.textContent = 'Error: No audio data captured.';
+                        alert("Recording completed, but no audio data was captured.");
+                    }
+                    this.syncButtonStates();
+                })
+                .catch(error => {
+                    console.error("UI: Error stopping recording or processing audio:", error);
+                    if (statusEl) statusEl.textContent = `Error: ${error.message || 'Could not save recording.'}`;
+                    alert(`Error during recording or saving: ${error.message || error}`);
+                    this.isRecording = false;
+                    this.syncButtonStates();
+                });
         }
-        // For now, the record button's enabled state is not managed by syncButtonStates in a special way
-        // beyond the initial setup. If other buttons should be disabled during recording,
-        // that logic would go into updateButtonStates or a specific call here.
-        // We also need to ensure that syncButtonStates correctly reflects the record button's state
-        // if it's meant to be part of the general button state logic.
-        // For this task, toggling its own appearance and state is primary.
-        this.syncButtonStates(); // Call sync to ensure other buttons are in correct state relative to play/pause/stop
-                                 // and record button's enabled state is also handled.
     }
 
     /**
@@ -221,16 +277,38 @@ class TransportControl {
      * Synchronizes button states with the AudioEngine's current playback state.
      */
     syncButtonStates() {
+        const recordButton = this.buttons['record-button'];
+
         if (!this.audioEngine || !this.audioEngine.audioContext) {
-            this.updateButtonStates({ play: false, pause: false, stop: false, record: false }); // All disabled
-            console.warn("TransportControl.syncButtonStates: AudioEngine not available.");
+            this.updateButtonStates({ play: false, pause: false, stop: false, record: false });
+            if (recordButton) recordButton.title = 'Audio engine not ready.';
+            console.warn("TransportControl.syncButtonStates: AudioEngine or AudioContext not available.");
             return;
         }
 
+        // Check if recording is supported by the engine
+        if (!this.audioEngine.isRecordingSupported) {
+            this.updateButtonStates({
+                play: this.audioEngine.isPaused || !this.audioEngine.isPlaying, // Play enabled if paused or stopped
+                pause: this.audioEngine.isPlaying && !this.audioEngine.isPaused, // Pause enabled if playing
+                stop: this.audioEngine.isPlaying || this.audioEngine.isPaused,   // Stop enabled if playing or paused
+                record: false // Record button disabled
+            });
+            if (recordButton) {
+                recordButton.title = 'Recording not supported or no suitable audio format found.';
+            }
+            console.warn("TransportControl.syncButtonStates: Recording not supported by AudioEngine.");
+            return; // Early exit if recording is not supported
+        }
+
+        // If recording is supported, set its title back to default (or remove it)
+        if (recordButton) recordButton.title = 'Record audio';
+
+
         const isPlaying = this.audioEngine.isPlaying;
         const isPaused = this.audioEngine.isPaused;
-        const recordButtonEnabled = true; // Record button is generally enabled if audio context is available.
-                                        // Its appearance (Record/Stop Rec) is handled by updateButtonStates.
+        // Record button is generally enabled if recording is supported. Its appearance is handled by updateButtonStates.
+        const recordButtonEnabled = true;
 
         if (isPlaying && !isPaused) { // Actively playing
             this.updateButtonStates({ play: false, pause: true, stop: true, record: recordButtonEnabled });
