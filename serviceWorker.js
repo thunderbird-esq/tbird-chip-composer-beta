@@ -4,7 +4,7 @@ const ASSETS = [
   '/index.html',
   '/styles/core.css',
   '/styles/system.css',
-  '/src/main.js',
+  '/main.bundle.js',
   '/src/audio/engine.js',
   '/src/audio/effects-tracker.js',
   '/src/audio/effects.js',
