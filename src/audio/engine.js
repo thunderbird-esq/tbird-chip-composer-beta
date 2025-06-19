@@ -7,6 +7,7 @@ class AudioEngine {
     constructor() {
         this.audioContext = null;
         this.masterGain = null;
+        this.loadedSamples = new Map(); // Added for storing loaded audio buffers
         // this.playbackIntervalId = null; // Removed
         this.currentStep = 0;
         this.trackerGrid = null; // To hold a reference to the grid
@@ -62,10 +63,38 @@ class AudioEngine {
     /**
      * Placeholder for loading a sound file.
      * @param {string} url - The URL of the sound file to load.
+     * @returns {Promise<AudioBuffer|null>} The decoded AudioBuffer or null if loading fails.
      */
     async loadSound(url) {
-        console.warn(`Sample loading is not yet implemented. Attempted to load: ${url}`);
-        return null;
+        if (!this.audioContext) {
+            console.error("AudioContext not initialized. Cannot load sound.");
+            return null;
+        }
+        if (this.loadedSamples.has(url)) {
+            console.log(`Sound already loaded: ${url}`);
+            return this.loadedSamples.get(url);
+        }
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status} while fetching ${url}`);
+            }
+            const arrayBuffer = await response.arrayBuffer();
+
+            try {
+                const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+                this.loadedSamples.set(url, audioBuffer);
+                console.log(`Sound loaded and decoded successfully: ${url}`);
+                return audioBuffer;
+            } catch (decodeError) {
+                console.error(`Error decoding audio data from ${url}:`, decodeError);
+                return null;
+            }
+        } catch (fetchError) {
+            console.error(`Error fetching sound from ${url}:`, fetchError);
+            return null;
+        }
     }
 
     /**
@@ -74,11 +103,26 @@ class AudioEngine {
      * @param {number} time - The AudioContext time at which to start playing.
      */
     playSound(buffer, time) {
-        console.warn(`Sample playback is not yet implemented. Attempted to play buffer at time: ${time}`);
-        // Minimal check to avoid further errors if something did try to call it with bad args
         if (!this.audioContext) {
-            console.error("AudioContext not initialized.");
+            console.error("AudioContext not initialized. Cannot play sound.");
             return;
+        }
+        if (!(buffer instanceof AudioBuffer)) {
+            console.error("Invalid AudioBuffer provided to playSound.");
+            return;
+        }
+        if (!this.masterGain) {
+            console.error("MasterGain not initialized. Cannot play sound.");
+            return;
+        }
+
+        try {
+            const source = this.audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(this.masterGain);
+            source.start(time);
+        } catch (e) {
+            console.error("Error playing sound:", e);
         }
     }
 
@@ -456,6 +500,7 @@ class AudioEngine {
     }
 }
 
-// Export the AudioEngine instance
+// Export the AudioEngine class for testing and the instance for general use
 const audioEngine = new AudioEngine();
-export default audioEngine;
+export { AudioEngine }; // Named export for the class
+export default audioEngine; // Default export for the singleton instance

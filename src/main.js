@@ -258,6 +258,54 @@ async function loadConfigAndInitialize() {
                 });
             }
         }
+
+        // Setup for Sample Library Panel
+        const samplePanelElement = panelManager.getPanel('sample-library-panel')?.panelElement;
+        if (samplePanelElement) {
+            const loadSampleButton = samplePanelElement.querySelector('#load-test-sample-button');
+            const playSampleButton = samplePanelElement.querySelector('#play-test-sample-button');
+            const statusElement = samplePanelElement.querySelector('#sample-library-status');
+            const testSampleUrl = 'assets/audio/ui/click.wav'; // Define URL for easy reuse
+
+            if (loadSampleButton && playSampleButton && statusElement) {
+                loadSampleButton.addEventListener('click', async () => {
+                    statusElement.textContent = 'Loading sample...';
+                    playSampleButton.disabled = true; // Disable play button during load
+                    try {
+                        const audioBuffer = await audioEngine.loadSound(testSampleUrl);
+                        if (audioBuffer) {
+                            statusElement.textContent = 'Sample loaded successfully!';
+                            playSampleButton.disabled = false; // Enable play button
+                        } else {
+                            statusElement.textContent = 'Error: Could not load sample.';
+                        }
+                    } catch (error) {
+                        console.error('Error during loadSound call:', error);
+                        statusElement.textContent = `Error loading sample: ${error.message}`;
+                    }
+                });
+
+                playSampleButton.addEventListener('click', () => {
+                    if (!audioEngine.audioContext) {
+                        statusElement.textContent = 'Audio context not ready.';
+                        console.error("PlaySample: AudioContext not available.");
+                        return;
+                    }
+                    const loadedBuffer = audioEngine.loadedSamples.get(testSampleUrl);
+                    if (loadedBuffer) {
+                        audioEngine.playSound(loadedBuffer, audioEngine.audioContext.currentTime);
+                        statusElement.textContent = 'Playing sample...';
+                    } else {
+                        statusElement.textContent = 'Sample not loaded. Please load first.';
+                        console.warn("PlaySample: Buffer not found for", testSampleUrl);
+                    }
+                });
+            } else {
+                console.warn("Sample library panel elements not found for event listener setup.");
+            }
+        } else {
+            console.warn("Sample library panel itself not found.");
+        }
     }
     console.log("Thunderbird Chiptune Composer: Initialization complete.");
 }

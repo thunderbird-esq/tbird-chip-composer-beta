@@ -234,8 +234,14 @@ class PanelManager {
 
         this.addPanel({
             id: 'sample-library-panel',
-            title: 'Sample Library (Placeholder)',
-            contentElement: '<p>If samples are supported, they would be managed here.</p>'
+            title: 'Sample Library',
+            contentElement: `
+                <div>
+                    <button id="load-test-sample-button">Load Test Sample</button>
+                    <button id="play-test-sample-button" disabled>Play Test Sample</button>
+                    <p id="sample-library-status" style="margin-top: 10px;">Sample status: Idle</p>
+                </div>
+            `
         });
     }
 

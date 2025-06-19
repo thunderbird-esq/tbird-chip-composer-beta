@@ -20,6 +20,7 @@ class TransportControl {
         }
         this.containerElement = containerElement;
         this.audioEngine = audioEngine;
+        this.isRecording = false; // Added for recording state
 
         this.buttons = {}; // To store references to button elements
     }
@@ -45,7 +46,7 @@ class TransportControl {
             { id: 'play-button', text: 'Play', icon: '▶️' },
             { id: 'pause-button', text: 'Pause', icon: '⏸️' },
             { id: 'stop-button', text: 'Stop', icon: '⏹️' },
-            { id: 'record-button', text: 'Record', icon: '⏺️', disabled: true }, // Record disabled by default
+            { id: 'record-button', text: 'Record', icon: '⏺️' }, // Record enabled by default
         ];
 
         buttonConfigs.forEach(config => {
@@ -143,9 +144,40 @@ class TransportControl {
      * Handles the record button click.
      */
     handleRecord() {
-        console.warn("Record functionality is not yet implemented.");
-        // Placeholder for future recording functionality
-        // Toggle recording state, update UI, etc.
+        this.isRecording = !this.isRecording;
+        const recordButton = this.buttons['record-button'];
+
+        if (recordButton) {
+            const iconElement = recordButton.querySelector('.icon');
+            const textElement = recordButton.querySelector('.text');
+
+            if (this.isRecording) {
+                if (iconElement) iconElement.textContent = '⏹️'; // Change icon to stop-like
+                if (textElement) textElement.textContent = 'Stop Rec';
+                recordButton.classList.add('recording-active');
+                console.log("Recording started");
+                // Potentially disable other buttons like play/pause if needed during recording
+                // this.updateButtonStates({ play: false, pause: false, stop: true, record: true });
+
+            } else {
+                if (iconElement) iconElement.textContent = '⏺️'; // Revert icon
+                if (textElement) textElement.textContent = 'Record';
+                recordButton.classList.remove('recording-active');
+                console.log("Recording stopped");
+                // Re-enable other buttons based on current playback state (e.g., call syncButtonStates)
+                // this.syncButtonStates(); // This will set record to false, which is fine.
+            }
+            // Explicitly ensure record button itself is always enabled after click.
+            // recordButton.disabled = false; // This might be handled by syncButtonStates or updateButtonStates
+        }
+        // For now, the record button's enabled state is not managed by syncButtonStates in a special way
+        // beyond the initial setup. If other buttons should be disabled during recording,
+        // that logic would go into updateButtonStates or a specific call here.
+        // We also need to ensure that syncButtonStates correctly reflects the record button's state
+        // if it's meant to be part of the general button state logic.
+        // For this task, toggling its own appearance and state is primary.
+        this.syncButtonStates(); // Call sync to ensure other buttons are in correct state relative to play/pause/stop
+                                 // and record button's enabled state is also handled.
     }
 
     /**
@@ -164,6 +196,20 @@ class TransportControl {
         }
         if (states.record !== undefined && this.buttons['record-button']) {
             this.buttons['record-button'].disabled = !states.record;
+            // If we are currently recording, the record button should reflect that.
+            if (this.isRecording) {
+                const iconElement = this.buttons['record-button'].querySelector('.icon');
+                const textElement = this.buttons['record-button'].querySelector('.text');
+                if (iconElement) iconElement.textContent = '⏹️';
+                if (textElement) textElement.textContent = 'Stop Rec';
+                this.buttons['record-button'].classList.add('recording-active');
+            } else {
+                const iconElement = this.buttons['record-button'].querySelector('.icon');
+                const textElement = this.buttons['record-button'].querySelector('.text');
+                if (iconElement) iconElement.textContent = '⏺️';
+                if (textElement) textElement.textContent = 'Record';
+                this.buttons['record-button'].classList.remove('recording-active');
+            }
         }
         console.log("TransportControl: Button states updated", states);
     }
@@ -179,16 +225,20 @@ class TransportControl {
         }
 
         const isPlaying = this.audioEngine.isPlaying;
-        const isPaused = this.audioEngine.isPaused; // Assuming isPaused is set correctly by audioEngine
+        const isPaused = this.audioEngine.isPaused;
+        const recordButtonEnabled = true; // Record button is generally enabled if audio context is available.
+                                        // Its appearance (Record/Stop Rec) is handled by updateButtonStates.
 
         if (isPlaying && !isPaused) { // Actively playing
-            this.updateButtonStates({ play: false, pause: true, stop: true, record: false });
+            this.updateButtonStates({ play: false, pause: true, stop: true, record: recordButtonEnabled });
         } else if (isPaused) { // Paused
-            this.updateButtonStates({ play: true, pause: false, stop: true, record: false });
+            this.updateButtonStates({ play: true, pause: false, stop: true, record: recordButtonEnabled });
         } else { // Stopped
-            this.updateButtonStates({ play: true, pause: false, stop: false, record: false });
+            this.updateButtonStates({ play: true, pause: false, stop: false, record: recordButtonEnabled });
         }
-        console.log(`TransportControl.syncButtonStates: isPlaying=${isPlaying}, isPaused=${isPaused}`);
+        // The call to updateButtonStates will ensure the record button's visual state (text, class)
+        // is correctly set based on this.isRecording.
+        console.log(`TransportControl.syncButtonStates: isPlaying=${isPlaying}, isPaused=${isPaused}, isRecording=${this.isRecording}`);
     }
 }
 
