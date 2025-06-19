@@ -2,6 +2,7 @@
  * @file Core audio engine for Thunderbird Chiptune Composer.
  * Handles audio context, sound loading, playback scheduling, and master controls.
  */
+import { applyTrackerEffect } from './effects-tracker.js';
 
 class AudioEngine {
     constructor() {
@@ -21,7 +22,10 @@ class AudioEngine {
             decay: 0.15,
             sustainLevel: 0.7,
             releaseTime: 0.2,
-            volume: 0.7 // Default per-instrument volume
+            volume: 0.7, // Default per-instrument volume
+            filterFrequency: 800,
+            lfoFrequency: 0,
+            lfoDepth: 0
         };
 
         this.bpm = 120;
@@ -31,6 +35,7 @@ class AudioEngine {
         this.noteDuration = 0.15;
         this.maxSteps = 16;
         this.onStepChangeCallback = null;
+        this.song = null;
     }
 
     /**
@@ -125,10 +130,31 @@ class AudioEngine {
         osc.type = activeInstrument.waveform || 'sine';
         osc.frequency.setValueAtTime(noteInfo.pitch, time);
 
-        gainNode.connect(this.masterGain);
-        osc.connect(gainNode);
+        let finalNode = gainNode;
 
         const noteEndTime = time + duration; // Time when note-off occurs / release phase starts
+
+        if (activeInstrument.filterFrequency) {
+            const filter = this.audioContext.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(activeInstrument.filterFrequency, this.audioContext.currentTime);
+            gainNode.connect(filter);
+            finalNode = filter;
+        }
+
+        if (activeInstrument.lfoDepth > 0 && activeInstrument.lfoFrequency > 0) {
+            const lfo = this.audioContext.createOscillator();
+            const lfoGain = this.audioContext.createGain();
+            lfo.frequency.setValueAtTime(activeInstrument.lfoFrequency, this.audioContext.currentTime);
+            lfoGain.gain.setValueAtTime(activeInstrument.lfoDepth * noteInfo.pitch, this.audioContext.currentTime);
+            lfo.connect(lfoGain);
+            lfoGain.connect(osc.frequency);
+            lfo.start(time);
+            lfo.stop(noteEndTime + release + 0.05);
+        }
+
+        finalNode.connect(this.masterGain);
+        osc.connect(gainNode);
 
         gainNode.gain.setValueAtTime(0, time); // Initial value
         gainNode.gain.linearRampToValueAtTime(peakVolume, time + attack); // Attack phase
@@ -215,6 +241,13 @@ class AudioEngine {
             this.currentStep++;
             if (this.currentStep >= this.maxSteps) {
                 this.currentStep = 0;
+                if (this.song) {
+                    this.song.nextPattern();
+                    if (this.trackerGrid) {
+                        this.trackerGrid.setPatternData(this.song.getCurrentPattern());
+                        this.maxSteps = this.trackerGrid.numRows;
+                    }
+                }
             }
             if (this.onStepChangeCallback) {
                 this.onStepChangeCallback(this.currentStep);
@@ -241,17 +274,16 @@ class AudioEngine {
 
         // const noteDuration = 0.1; // This is now this.noteDuration, set in constructor
 
-        stepData.forEach((trackCell, trackIndex) => {
+        stepData.forEach((trackCell) => {
             const frequency = this.parseNoteString(trackCell.note);
 
-            if (frequency) { // Check if frequency is not null (i.e., valid note string)
+            if (frequency) {
                 const noteInfo = {
                     pitch: frequency,
-                    velocity: 0.5 // Default velocity, could be from grid later
+                    velocity: 0.5,
+                    instrumentId: trackCell.instrument || 'default'
                 };
-                const instrumentId = trackCell.instrument;
-                const activeInstrument = (instrumentId && instrumentId !== '--') ? this.getInstrument(instrumentId) : this.defaultInstrument;
-                this.scheduleNote(noteInfo, time, this.noteDuration, activeInstrument);
+                applyTrackerEffect(this, noteInfo, trackCell.effectCmd, trackCell.effectVal, time);
             }
         });
     }
@@ -380,6 +412,14 @@ class AudioEngine {
             this.maxSteps = gridInstance.numRows || 16;
         }
         console.log(`AudioEngine: TrackerGrid instance received. maxSteps set to ${this.maxSteps}.`);
+    }
+
+    setSong(song) {
+        this.song = song;
+        if (song && song.patterns.length > 0 && this.trackerGrid) {
+            this.trackerGrid.setPatternData(song.getCurrentPattern());
+            this.maxSteps = this.trackerGrid.numRows;
+        }
     }
 
     /**

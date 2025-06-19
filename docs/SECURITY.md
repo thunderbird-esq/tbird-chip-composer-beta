@@ -1,4 +1,8 @@
-// Placeholder content for SECURITY.md
+# Security Guidelines
+
+All user-supplied files must be validated before use. MIDI import checks the
+file header and size (see code comments). Avoid executing arbitrary scripts in
+the browser context and keep dependencies up to date.
 
 
 ## BBS-Specific Security Considerations

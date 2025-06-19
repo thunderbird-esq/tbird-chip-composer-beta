@@ -206,7 +206,18 @@ class PanelManager {
                         <label for="inst-release">Release (s):</label>
                         <input type="number" id="inst-release" step="0.001" min="0.001" value="0.2"><br>
 
+                        <label for="inst-filter">Filter Cutoff (Hz):</label>
+                        <input type="number" id="inst-filter" step="10" min="100" value="800"><br>
+
+                        <label for="inst-lfo-freq">LFO Freq (Hz):</label>
+                        <input type="number" id="inst-lfo-freq" step="0.1" min="0" value="0"><br>
+
+                        <label for="inst-lfo-depth">LFO Depth:</label>
+                        <input type="number" id="inst-lfo-depth" step="0.01" min="0" max="1" value="0"><br>
+
                         <button id="update-instrument-button">Update Selected Instrument</button>
+                        <button id="add-instrument-button">Add New Instrument</button>
+                        <button id="delete-instrument-button">Delete Instrument</button>
                     </div>
                 </div>
             `
@@ -227,6 +238,9 @@ class PanelManager {
                     <hr>
                     <button id="save-project-button">Save Project</button>
                     <button id="load-project-button">Load Project</button>
+                    <button id="export-project-button">Export File</button>
+                    <input type="file" id="import-project-input" style="display:none" accept="application/json">
+                    <button id="import-project-button">Import File</button>
                     <p><small>Project Name is not saved yet. Save/Load uses browser's localStorage.</small></p>
                 </div>
             `
@@ -236,6 +250,14 @@ class PanelManager {
             id: 'sample-library-panel',
             title: 'Sample Library (Placeholder)',
             contentElement: '<p>If samples are supported, they would be managed here.</p>'
+        });
+
+        this.addPanel({
+            id: 'pattern-sequencer-panel',
+            title: 'Pattern Sequencer',
+            contentElement: `
+                <button id="add-pattern-button">Add Pattern</button>
+            `
         });
     }
 

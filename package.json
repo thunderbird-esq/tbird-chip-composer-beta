@@ -5,7 +5,7 @@
   "main": "index.html",
   "scripts": {
     "start": "http-server -p 8080",
-    "test": "node tests/unit/audio.test.js && node tests/unit/ui.test.js"
+    "test": "node tests/unit/audio.test.js && node tests/unit/ui.test.js && node tests/unit/midi.test.js"
   },
   "author": "Thunderbird Project Team",
   "license": "MIT",

@@ -1,4 +1,4 @@
-// Placeholder content for DEVELOPMENT_LOG.md
+# Development Log
 
 
 ## [2025-04-09] Structural & Testing Update
@@ -115,3 +115,18 @@
 
 **Overall State**:
 The application is now significantly more functional, offering a more interactive composition experience with configurable sound, visual feedback during playback, and the ability to save and load work.
+
+## [2025-06-19] Feature expansion
+- Added inline editing for all grid columns.
+- Implemented basic tracker effects (slide, arpeggio).
+- Instruments now support filter cutoff and LFO with UI controls.
+- Introduced song sequencing with pattern management.
+- Added project file import/export and MIDI utilities.
+- Integrated system.css styling and build script hashing.
+
+## [2025-06-20] Documentation and build updates
+- Filled out all documentation placeholders with real content.
+- Enhanced `build.sh` to bundle scripts with esbuild when available.
+- Updated the service worker to cache the new bundle.
+- Expanded README with setup instructions and revised limitations section.
+
