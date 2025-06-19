@@ -32,11 +32,21 @@ This is the development sandbox for Thunderbird, a web-based chiptune composer. 
 *   **ES Module-based Architecture**: Modern JavaScript structure.
 *   **Offline Capable**: Works offline thanks to ServiceWorker support (initial setup).
 
-## Getting Started
+## Requirements
 
+- [Node.js](https://nodejs.org/) v16 or newer for development scripts
+- `npm install` to fetch the optional `http-server` dependency
+
+## Getting Started
+1.  **Install Dependencies**: Run `npm install` to fetch the optional dev server.
+2.  **Launch**: Either open `index.html` directly or run `npx http-server -p 8080` (or `python3 -m http.server`) and navigate to `http://localhost:8080`.
+3.  **Explore**: The application will load with a default pattern and instruments.
+4.  **Experiment**: Try entering notes, changing instrument sounds, and using playback controls.
+=======
 1.  **Launch**: Open `index.html` in a web browser. Running `python3 -m http.server` from the project directory is recommended for local testing.
 2.  **Explore**: The application will load with a default pattern and instruments.
 3.  **Experiment**: Try entering notes, changing instrument sounds, and using playback controls.
+
 
 ## How to Use
 
@@ -87,16 +97,11 @@ This is the development sandbox for Thunderbird, a web-based chiptune composer. 
 
 ## Known Limitations & Future Work
 
-*   **Grid Editing**:
-    *   Inline editing is currently only for the 'note' column. Instrument numbers and effect columns are not yet editable via the inline editor.
-    *   Note input validation is basic.
-*   **Effects System**: No tracker effects (e.g., pitch slides, arpeggios) are implemented yet.
-*   **Instruments**:
-    *   Limited parameters (no filters, LFOs, etc.).
-    *   No UI for easily adding, removing, or cloning instruments beyond the current ID input method.
-*   **Song Structure**: Supports only a single pattern. No song sequencing or multiple pattern management.
-*   **File I/O**: Project saving/loading is limited to browser `localStorage`. No file export/import yet.
-*   **MIDI I/O**: No MIDI import or export capabilities.
+*   **Tracker Grid**: Editing is functional for all columns but lacks multi-cell selection and advanced shortcuts.
+*   **Effects System**: Only slide and arpeggio commands are supported so far.
+*   **Instruments**: More effect types and presets would be useful.
+*   **Song Structure**: Pattern sequencing works but has no UI for reordering patterns.
+*   **Documentation**: Some guides remain brief and can be expanded.
 
 This project is an ongoing development sandbox. Contributions and feedback are welcome!
 

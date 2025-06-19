@@ -4,7 +4,14 @@ mkdir -p dist
 cp index.html dist/
 cp -r assets dist/
 cp -r styles dist/
-cp -r src dist/
+
+# Bundle and minify JavaScript using esbuild if available
+if command -v npx >/dev/null 2>&1; then
+  npx --yes esbuild src/main.js --bundle --minify --outfile=dist/main.bundle.js
+else
+  cp -r src dist/
+fi
+
 cp config.json dist/
 cp serviceWorker.js dist/
 
