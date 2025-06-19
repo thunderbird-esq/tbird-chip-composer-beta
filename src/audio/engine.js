@@ -207,7 +207,11 @@ class AudioEngine {
         if (!this.isPlaying || this.isPaused) return;
 
         while (this.nextNoteTime < this.audioContext.currentTime + this.scheduleAheadTime) {
-            // console.log(`Scheduling step ${this.currentStep} at ${this.nextNoteTime.toFixed(3)}`);
+            // Call callback for the *current* step that is about to be played
+            if (this.onStepChangeCallback) {
+                this.onStepChangeCallback(this.currentStep);
+            }
+
             this.playStepData(this.currentStep, this.nextNoteTime);
 
             this.nextNoteTime += this.calculateStepDuration();
@@ -216,9 +220,10 @@ class AudioEngine {
             if (this.currentStep >= this.maxSteps) {
                 this.currentStep = 0;
             }
-            if (this.onStepChangeCallback) {
-                this.onStepChangeCallback(this.currentStep);
-            }
+            // The callback was moved from here:
+            // if (this.onStepChangeCallback) {
+            //     this.onStepChangeCallback(this.currentStep); // OLD position
+            // }
         }
         this.timerID = setTimeout(() => this.scheduler(), this.scheduleAheadTime * 1000 / 2);
     }

@@ -117,23 +117,23 @@ class TrackerGrid {
         // Create table body
         const tbody = table.createTBody();
         for (let r = 0; r < this.numRows; r++) {
-            const row = tbody.insertRow();
+            const rowElement = tbody.insertRow(); // Changed variable name for clarity
+            // ***** THIS IS THE KEY CHANGE IN RENDER for playingRow *****
             if (r === this.playingRow) {
-                row.classList.add('playing-row');
-            } else {
-                row.classList.remove('playing-row'); // Ensure it's removed if not the playing row
+                rowElement.classList.add('playing-row');
             }
+            // No explicit remove needed here as we are rebuilding rows.
 
-            const rowNumCell = row.insertCell();
+            const rowNumCell = rowElement.insertCell();
             rowNumCell.textContent = r.toString().padStart(2, '0'); // Format row number
             rowNumCell.classList.add('row-number');
 
             for (let t = 0; t < this.numTracks; t++) {
-                const trackData = this.patternData[r][t];
+                const trackData = this.patternData[r][t] || this._createEmptyPatternData(1,1)[0][0]; // Ensure trackData exists
                 const columnKeys = ['note', 'instrument', 'effectCmd', 'effectVal'];
 
                 columnKeys.forEach(columnKey => {
-                    const cell = row.insertCell();
+                    const cell = rowElement.insertCell();
                     cell.classList.add(`${columnKey}-cell`);
                     cell.dataset.row = r;
                     cell.dataset.track = t;
@@ -506,14 +506,29 @@ class TrackerGrid {
      *                            -1 to clear the highlight.
      */
     setPlayingRow(rowIndex) {
-        if (this.playingRow !== rowIndex) {
-            this.playingRow = rowIndex;
-            this.render();
-        } else if (rowIndex === -1 && this.playingRow !== -1) {
-            // Explicitly clear if called with -1 and something was highlighted
-            this.playingRow = -1;
-            this.render();
+        if (!this.tableElement || !this.tableElement.tBodies[0]) {
+            // If table or tbody doesn't exist, fall back to render for safety,
+            // though ideally this shouldn't happen after init.
+            if (this.playingRow !== rowIndex) { // Only render if it actually changes
+                this.playingRow = rowIndex;
+                this.render(); // Fallback to full render
+            }
+            return;
         }
+
+        const tbody = this.tableElement.tBodies[0];
+
+        // Remove highlight from the old playing row
+        if (this.playingRow >= 0 && this.playingRow < tbody.rows.length) {
+            tbody.rows[this.playingRow].classList.remove('playing-row');
+        }
+
+        // Add highlight to the new playing row
+        if (rowIndex >= 0 && rowIndex < tbody.rows.length) {
+            tbody.rows[rowIndex].classList.add('playing-row');
+        }
+
+        this.playingRow = rowIndex;
     }
 
     /**

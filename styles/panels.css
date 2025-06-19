@@ -1,1 +1,115 @@
-// Placeholder content for panels.css
+/* General Panel Styling */
+.control-panel {
+    background-color: #2a2a2a; /* Darker than body, but not black */
+    border: 2px solid #555555; /* Retro border style - could be double or inset too */
+    box-shadow: 4px 4px 0px #000000; /* Hard shadow for 8-bit effect */
+    padding: 10px;
+    margin-bottom: 15px;
+    image-rendering: pixelated; /* Ensure borders and shadows look crisp if scaled */
+}
+
+/* Panel Titles */
+.panel-title {
+    font-family: 'Press Start 2P', 'Courier New', Courier, monospace;
+    font-size: 1.2em; /* Slightly larger than body text */
+    color: #ffffff; /* Bright color for titles */
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+    border-bottom: 2px solid #555555;
+    text-transform: uppercase; /* Common in retro UIs */
+}
+
+/* Grouping elements within panels */
+.panel-group {
+    margin-bottom: 15px;
+    padding: 5px;
+    border: 1px dashed #444; /* Optional: visual grouping for sections within a panel */
+}
+
+.panel-group:last-child {
+    margin-bottom: 0;
+}
+
+.panel-group label {
+    display: block;
+    margin-bottom: 6px;
+    color: #bbbbbb; /* Slightly dimmer than main text */
+    font-size: 1em; /* Ensure labels use the base font size */
+}
+
+/* Input elements, buttons, selects within panels */
+.control-panel input[type="text"],
+.control-panel input[type="number"],
+.control-panel input[type="range"],
+.control-panel select,
+.control-panel textarea {
+    font-family: 'Press Start 2P', 'Courier New', Courier, monospace;
+    background-color: #1e1e1e;
+    border: 2px solid #555555;
+    color: #d4d4d4;
+    padding: 8px;
+    width: calc(100% - 20px); /* 8px padding L/R + 2px border L/R = 20px */
+    margin-bottom: 8px;
+    box-sizing: border-box;
+    font-size: 1em; /* Ensure form elements match base font size */
+    image-rendering: pixelated;
+}
+
+.control-panel input[type="range"] {
+    padding: 0; /* Range inputs often need special handling */
+}
+
+.control-panel input[type="checkbox"],
+.control-panel input[type="radio"] {
+    margin-right: 5px;
+    vertical-align: middle;
+    /* Custom checkbox/radio styling might be needed for full retro look */
+}
+
+
+.control-panel button {
+    font-family: 'Press Start 2P', 'Courier New', Courier, monospace;
+    background-color: #444444;
+    border: 2px solid #777777;
+    color: #ffffff;
+    padding: 8px 12px;
+    margin-top: 5px;
+    margin-right: 5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 2px 2px 0px #000000;
+    font-size: 1em;
+}
+
+.control-panel button:hover {
+    background-color: #555555;
+    border-color: #888888;
+}
+
+.control-panel button:active {
+    background-color: #333333;
+    border-color: #666666;
+    box-shadow: 1px 1px 0px #000000;
+    transform: translate(1px, 1px); /* Pressed effect */
+}
+
+/* Specific panel examples (if IDs or specific classes are known) */
+/*
+#instrument-editor-panel {
+    background-color: #302020;
+}
+
+#track-settings-panel .panel-title {
+    color: #88ff88;
+}
+*/
+
+/* Utility classes */
+.text-center {
+    text-align: center;
+}
+
+.full-width {
+    width: 100%;
+    box-sizing: border-box;
+}

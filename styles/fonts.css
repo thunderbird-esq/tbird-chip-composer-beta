@@ -1,1 +1,26 @@
-// Placeholder content for fonts.css
+@font-face {
+    font-family: 'Press Start 2P';
+    src: url('../assets/fonts/PressStart2P.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}
+
+body {
+    font-family: 'Press Start 2P', 'Courier New', Courier, monospace; /* Fallback fonts */
+    /* Adjust font size if needed, Press Start 2P is typically small */
+    font-size: 10px; /* Or 0.625rem, common base for 8-bit style if 16px is default */
+    line-height: 1.5; /* Improve readability */
+    background-color: #1e1e1e; /* Dark background for retro feel */
+    color: #d4d4d4; /* Light text color */
+}
+
+.font-press-start {
+    font-family: 'Press Start 2P', 'Courier New', Courier, monospace;
+}
+
+/* General application-wide text elements if needed */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Press Start 2P', 'Courier New', Courier, monospace;
+    color: #ffffff; /* White or bright color for headings */
+    margin-bottom: 0.5em;
+}
