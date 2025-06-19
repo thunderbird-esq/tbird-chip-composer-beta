@@ -26,12 +26,7 @@ This directory houses modules responsible for the user interface and user intera
 
 ### `src/utils/`
 
-This directory contains utility functions and helper modules used throughout the application.
-
-- **`file-io.js`**: Handles file input/output operations (e.g., saving and loading projects).
-- **`formatters.js`**: Provides functions for formatting data (e.g., time, MIDI).
-- **`midi-export.js`**: Implements functionality for exporting projects or patterns to MIDI files.
-- **`midi-import.js`**: Implements functionality for importing MIDI files into the application.
+(This directory is reserved for future utility modules such as file I/O and MIDI handlers. Currently empty.)
 
 ### Root `src/` Files
 

@@ -271,4 +271,17 @@ document.addEventListener('DOMContentLoaded', () => {
             appContainer.innerHTML = '<p style="color: red; text-align: center; margin-top: 50px;">An unexpected error occurred.</p>';
         }
     });
+
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => { // Using 'load' to ensure everything else is loaded
+            navigator.serviceWorker.register('/serviceWorker.js')
+                .then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                })
+                .catch(error => {
+                    console.log('ServiceWorker registration failed: ', error);
+                });
+        });
+    }
 });
