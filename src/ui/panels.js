@@ -36,15 +36,18 @@ class UIPanel {
 
         this.panelElement = document.createElement('div');
         this.panelElement.id = this.id;
-        this.panelElement.classList.add('ui-panel');
+        this.panelElement.classList.add('ui-panel', 'window');
 
         const titleBar = document.createElement('div');
-        titleBar.classList.add('panel-title-bar');
-        titleBar.textContent = this.title;
+        titleBar.classList.add('title-bar');
+        const titleText = document.createElement('div');
+        titleText.classList.add('title-bar-text');
+        titleText.textContent = this.title;
+        titleBar.appendChild(titleText);
         this.panelElement.appendChild(titleBar);
 
         const contentArea = document.createElement('div');
-        contentArea.classList.add('panel-content');
+        contentArea.classList.add('window-body', 'panel-content');
 
         if (typeof this.contentElement === 'string') {
             contentArea.innerHTML = this.contentElement;

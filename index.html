@@ -11,15 +11,20 @@
     <link rel="stylesheet" href="styles/panels.css">
 </head>
 <body>
-    <div id="app-container">
-        <header id="app-header"></header>
-        <main id="main-content">
-            <div id="tracker-grid-container"></div>
-            <div id="control-panels-container"></div>
-        </main>
-        <div id="transport-controls-container"></div>
-        <div id="visualizer-container"></div>
-        <footer id="app-footer"></footer>
+    <div id="app-container" class="window">
+        <div class="title-bar">
+            <div class="title-bar-text">Thunderbird Chiptune Composer</div>
+        </div>
+        <div class="window-body">
+            <header id="app-header"></header>
+            <main id="main-content">
+                <div id="tracker-grid-container"></div>
+                <div id="control-panels-container"></div>
+            </main>
+            <div id="transport-controls-container"></div>
+            <div id="visualizer-container"></div>
+            <footer id="app-footer"></footer>
+        </div>
     </div>
 
     <script src="src/constants.js" defer></script>

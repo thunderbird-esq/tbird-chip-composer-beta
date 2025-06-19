@@ -4,15 +4,21 @@
 <head>
   <meta charset="UTF-8">
   <title>Dev Panel - Chiptune Composer</title>
-  <style>
-    body { font-family: monospace; padding: 1rem; background: #222; color: #fff; }
-    button { margin: 0.5rem; padding: 0.5rem; font-size: 1rem; }
-  </style>
+  <link rel="stylesheet" href="styles/system.css">
+  <link rel="stylesheet" href="styles/core.css">
+  <link rel="stylesheet" href="styles/fonts.css">
 </head>
 <body>
-  <h1>🎛️ Chiptune Dev Panel</h1>
-  <p>Use this page to interact with key modules manually.</p>
-  <button onclick="playClick()">🔊 Play click.wav</button>
+  <div class="window" style="width: 300px;">
+    <div class="title-bar">
+      <div class="title-bar-text">Dev Panel</div>
+    </div>
+    <div class="window-body">
+      <h1>🎛️ Chiptune Dev Panel</h1>
+      <p>Use this page to interact with key modules manually.</p>
+      <button onclick="playClick()">🔊 Play click.wav</button>
+    </div>
+  </div>
   <script>
     function playClick() {
       const audio = new Audio('assets/sfx/click.wav');
