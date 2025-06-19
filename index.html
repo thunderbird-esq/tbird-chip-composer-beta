@@ -40,49 +40,6 @@
              <!-- Minimalist footer -->
         </footer>
     </div>
-    <style>
-        /* Basic flex layout for main-content - system.css is component-focused */
-        body { display: flex; flex-direction: column; min-height: 100vh; }
-        #app-container { display: flex; flex-direction: column; flex-grow: 1; }
-        .main-layout { display: flex; flex-grow: 1; padding: 5px; gap: 5px; overflow: hidden; }
-        .layout-column { display: flex; flex-direction: column; gap: 5px; }
-        #left-column { flex: 3; } /* Adjust ratio as needed */
-        #right-column { flex: 1; display: flex; flex-direction: column; }
-        #control-panels-container { display: flex; flex-direction: column; gap: 5px; overflow-y: auto; flex-grow: 1;}
-        #tracker-grid-container { flex-grow: 3; display: flex; flex-direction: column; } /* Allow grid to take more space */
-        #visualizer-container { flex-grow: 1; display: flex; flex-direction: column; min-height: 100px; } /* Ensure visualizer has some min height */
-        .transport-bar { padding: 5px; background-color: #ccc; /* Placeholder bg */ display: flex; justify-content: center; gap: 5px; border-top: 1px solid #000; }
-        /* Ensure windows fill their containers */
-        .window { display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; }
-
-        /* Custom styles for UI elements to complement system.css */
-        .tracker-grid-table .selected-cell {
-            background-color: #000 !important; /* Black background for selection */
-            color: #fff !important; /* White text for selection */
-            outline: 1px dashed #fff; /* Dashed outline for selected cell */
-            outline-offset: -1px;
-        }
-
-        .tracker-grid-table .playing-row {
-            background-color: #c0c0c0 !important; /* A light gray, different from default window bg */
-            /* You might want to ensure text color contrasts well, e.g., color: #000; */
-        }
-
-        .tracker-grid-table .playing-row td.row-number {
-            background-color: #a0a0a0 !important; /* Darker gray for playing row number */
-            color: #000 !important;
-        }
-
-        .btn.recording-active {
-            background: #000; /* Inverted style like system.css active buttons */
-            color: #fff;
-            /* system.css .btn:active also adds a border-radius: 6px, we can add it or let it be */
-        }
-
-        /* Ensure grid cell input is styled for editing with system.css focus */
-        /* input.grid-cell-input is already handled by system.css input:focus-visible */
-
-    </style>
 
     <script type="module" src="src/constants.js" defer></script>
     <script type="module" src="src/audio/engine.js" defer></script>
