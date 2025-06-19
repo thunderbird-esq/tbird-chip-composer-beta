@@ -1,1 +1,10 @@
-// Placeholder content for fonts.css
+@font-face {
+    font-family: 'PressStart2P';
+    src: url('../assets/fonts/PressStart2P.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}
+
+body {
+    font-family: 'PressStart2P', monospace;
+}

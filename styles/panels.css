@@ -1,1 +1,9 @@
-// Placeholder content for panels.css
+/* Panel styling applied on top of system.css windows */
+
+.ui-panel {
+    margin-bottom: 10px;
+}
+
+.ui-panel .window-body {
+    padding: 8px;
+}
