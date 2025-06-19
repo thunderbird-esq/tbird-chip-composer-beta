@@ -99,3 +99,7 @@ This is the development sandbox for Thunderbird, a web-based chiptune composer. 
 *   **MIDI I/O**: No MIDI import or export capabilities.
 
 This project is an ongoing development sandbox. Contributions and feedback are welcome!
+
+## License
+
+This project is released under the MIT License. It bundles `system.css` by Sakun Acharige, also MIT-licensed.
