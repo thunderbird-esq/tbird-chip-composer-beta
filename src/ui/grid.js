@@ -188,18 +188,17 @@ class TrackerGrid {
             const cell = event.target.closest('td[data-row][data-track][data-column]');
             if (cell) {
                 const columnKey = cell.dataset.column;
-                if (columnKey === 'note') { // Only 'note' column editable for now
-                    this._beginEdit(cell, parseInt(cell.dataset.row), parseInt(cell.dataset.track), columnKey);
-                }
+                this._beginEdit(cell, parseInt(cell.dataset.row), parseInt(cell.dataset.track), columnKey);
             }
         });
 
         document.addEventListener('keydown', (event) => this.handleKeyDown(event));
     }
 
-    _createCellInputElement(value) {
+    _createCellInputElement(value, columnKey) {
         const input = document.createElement('input');
         input.type = 'text';
+        input.maxLength = columnKey === 'note' ? 3 : 2;
         input.value = value === "---" ? "" : value;
         input.classList.add('grid-cell-input');
         // Styles are better in CSS, but for quick setup:
@@ -244,7 +243,7 @@ class TrackerGrid {
 
 
         const currentValue = this.patternData[row][track][columnKey];
-        const inputElement = this._createCellInputElement(currentValue);
+        const inputElement = this._createCellInputElement(currentValue, columnKey);
 
         this.editingCell = { row, track, column: columnKey, originalValue: currentValue, inputElement, tdElement };
 
@@ -268,8 +267,28 @@ class TrackerGrid {
                 console.warn(`Invalid note format: "${newValue}". Reverting to original.`);
                 newValue = originalValue;
             }
+        } else if (column === 'instrument') {
+            if (newValue === "") {
+                newValue = "--";
+            } else if (!newValue.match(/^[0-9A-Z]{2}$/) && newValue !== "--") {
+                console.warn(`Invalid instrument value: "${newValue}". Reverting to original.`);
+                newValue = originalValue;
+            }
+        } else if (column === 'effectCmd') {
+            if (newValue === "") {
+                newValue = "--";
+            } else if (!newValue.match(/^[0-9A-Z]{2}$/) && newValue !== "--") {
+                console.warn(`Invalid effect command: "${newValue}". Reverting to original.`);
+                newValue = originalValue;
+            }
+        } else if (column === 'effectVal') {
+            if (newValue === "") {
+                newValue = "--";
+            } else if (!newValue.match(/^[0-9A-F]{2}$/) && newValue !== "--") {
+                console.warn(`Invalid effect value: "${newValue}". Reverting to original.`);
+                newValue = originalValue;
+            }
         }
-        // Add validation for other column types here in future
 
         if (this.patternData[row][track][column] !== newValue) {
             this.patternData[row][track][column] = newValue;

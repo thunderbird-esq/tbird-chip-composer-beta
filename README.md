@@ -5,6 +5,7 @@ This is the development sandbox for Thunderbird, a web-based chiptune composer. 
 ## Core Features
 
 *   **Fully Client-Side**: No installation needed, runs entirely in modern web browsers.
+*   **Retro UI**: Styled with `system.css` to emulate classic desktop interfaces.
 *   **Web Audio API Sound Engine**:
     *   Supports multiple instruments with customizable ADSR (Attack, Decay, Sustain, Release) envelopes.
     *   Adjustable per-instrument volume.
@@ -33,7 +34,7 @@ This is the development sandbox for Thunderbird, a web-based chiptune composer. 
 
 ## Getting Started
 
-1.  **Launch**: Open `index.html` in a compatible web browser (e.g., Chrome, Firefox, Edge).
+1.  **Launch**: Open `index.html` in a web browser. Running `python3 -m http.server` from the project directory is recommended for local testing.
 2.  **Explore**: The application will load with a default pattern and instruments.
 3.  **Experiment**: Try entering notes, changing instrument sounds, and using playback controls.
 
@@ -98,3 +99,7 @@ This is the development sandbox for Thunderbird, a web-based chiptune composer. 
 *   **MIDI I/O**: No MIDI import or export capabilities.
 
 This project is an ongoing development sandbox. Contributions and feedback are welcome!
+
+## License
+
+This project is released under the MIT License. It bundles `system.css` by Sakun Acharige, also MIT-licensed.
